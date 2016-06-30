@@ -7,7 +7,7 @@
 	* `rigidTermination` (`*(-1)`)
 	* 
 	* String Instruments
-		* 
+		* `bridge`
 		* Plucked String Instruments
 			* `impulseExcitation`
 			* `acousticExcitation`
