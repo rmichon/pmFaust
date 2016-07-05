@@ -1,6 +1,7 @@
 // # `pm.lib`: Physical Modeling Library
 
 import("filter.lib");
+import("music.lib");
 
 //-------chain(A:B:...)----------
 // Creates a chain of bidirectional blocks. 
@@ -149,4 +150,69 @@ with{
 	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
 	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
 	term = *(-reflexion); // terminations
+};
+
+//-------bridge(length,B,rho,pluckPosition,x)-----------
+// Similar to idealString, but with damping filter at the terminations instead of just a
+// multiplying factor.
+// ### Usage
+// ```
+// 1-1' : bridge(length,B,rho,pluckPosition,x)
+// ```
+// With:
+// * `length`: length of the string in meters
+// * `B`: the brightness of the string (0-0.99)
+// * `rho`: multiplies loop-gain
+// * `pluckPosition`: the plucking position (0.001-0.999)
+// * `x`: the input signal for the excitation
+// ### Requires
+// `filter.lib`
+//------------------------------------------------------
+bridge(length,B,rho,pluckPosition,x) = fullTerminations(dampingFilter,wg,dampingFilter)
+with{
+	nMax = 512; // each segment of the string can't be longer than that
+	N = length*SR/320-8; // length (meters) to samples
+	nUp = N/2*pluckPosition : max(1); // upper string segment length
+	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
+	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
+
+	dampingFilter(x) = - rho * (h0 * x' + h1*(x+x''))
+	with{
+		h0 = (1.0 + B)/2;
+		h1 = (1.0 - B)/4;
+	};// terminations
+};
+
+//-------impulseExcitation(gate)--------------
+// Creates an impulse excitation of one sample, from a gate button when it is triggered.
+// ### Usage
+// ```
+// gate = button('gate');
+// impulseExcitation(gate) : chain;
+// ```
+// With:
+// * `gatè: a gate button
+//--------------------------------------
+impulseExcitation(gate) = gate <: _,mem : - : >(0);
+
+//-------acousticExcitation(gate,P)-------------
+// Creates an acoustic excitation (a noise burst) when a gate button is triggered.
+// ### Usage
+// ```
+// gate = button('gate');
+// P = SR/freq;
+// acousticExcitation(gate,P) : chain;
+// ```
+// With:
+// * `gatè: a gate button
+// * `P̀ : fundamental period in samples
+// ### Requires
+// 'music.lib' (noise)
+//--------------------------------------
+acousticExcitation(gate,P) = noise : *(gate : trigger(P))
+with {
+     diffgtz(x) = (x-x') > 0;
+     decay(n,x) = x-(x>0)/n;
+     release(n) = + ~ decay(n);
+     trigger(n) = diffgtz : release(n) : > (0.0);
 };
