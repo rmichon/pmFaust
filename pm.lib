@@ -152,35 +152,63 @@ with{
 	term = *(-reflexion); // terminations
 };
 
-//-------bridge(length,B,rho,pluckPosition,x)-----------
-// Similar to idealString, but with damping filter at the terminations instead of just a
-// multiplying factor.
+//-------dampingFilter(rho,h0,h1,x)--------------------
+//-----------------------------------------------------
+dampingFilter(rho,h0,h1,x) = rho * (h0 * x' + h1*(x+x''));
+
+//-------bridge(length,B,t60,x)-----------
+// Simulate a bridge using a dampingFilter.
 // ### Usage
 // ```
-// 1-1' : bridge(length,B,rho,pluckPosition,x)
+//
 // ```
 // With:
 // * `length`: length of the string in meters
 // * `B`: the brightness of the string (0-0.99)
-// * `rho`: multiplies loop-gain
-// * `pluckPosition`: the plucking position (0.001-0.999)
+// * `t60̀: decaying time
 // * `x`: the input signal for the excitation
 // ### Requires
 // `filter.lib`
 //------------------------------------------------------
-bridge(length,B,rho,pluckPosition,x) = fullTerminations(dampingFilter,wg,dampingFilter)
+bridge(length,B,t60,x) = dampingFilter(rho,h0,h1,x)
+with{
+	freq = 320/length;
+	h0 = (1.0 + B)/2;
+	h1 = (1.0 - B)/4;
+	rho = pow(0.001,1.0/(freq*t60));
+};
+
+//-------steelString-----------------------------
+//-----------------------------------------------
+steelString(length,pluckPosition,x) = fullTerminations(bridge,wg,bridge)
 with{
 	nMax = 512; // each segment of the string can't be longer than that
 	N = length*SR/320-8; // length (meters) to samples
 	nUp = N/2*pluckPosition : max(1); // upper string segment length
 	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
 	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
-
-	dampingFilter(x) = - rho * (h0 * x' + h1*(x+x''))
+	bridge = bridge(length,B,t60,x)
 	with{
-		h0 = (1.0 + B)/2;
-		h1 = (1.0 - B)/4;
-	};// terminations
+		B = 0.8;
+		t60 = 6;
+	};
+};
+
+//-------nylonString-----------------------------
+//-----------------------------------------------
+nylonString(length,pluckPosition,B,t60,x) = fullTerminations(term,wg,term)
+with{
+	nMax = 512; // each segment of the string can't be longer than that
+	N = length*SR/320-8; // length (meters) to samples
+	nUp = N/2*pluckPosition : max(1); // upper string segment length
+	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
+	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
+	
+	term(x) = bridge(length,B,t60,x)
+	with{
+		B = 0.25;
+		t60 = 4;
+	};
 };
 
 //-------impulseExcitation(gate)--------------
@@ -215,4 +243,29 @@ with {
      decay(n,x) = x-(x>0)/n;
      release(n) = + ~ decay(n);
      trigger(n) = diffgtz : release(n) : > (0.0);
+};
+
+
+//-----modeFilter-----
+modeFilter(f,t60) = tf2(b0,b1,b2,a1,a2)
+with{
+	b0 = 1;
+	b1 = 0;
+	b2 = -1;
+	w = 2*PI*f/SR;
+	r = pow(0.001,1/float(t60*SR));
+	a1 = -2*r*cos(w);
+	a2 = r^2;
+};
+
+//---modalModel--
+// modeFreqs : list of modal frequencies
+// modeRes : list of t60 corresponding to the frequencies
+// modeGains : list of gains corresponding to the frequencies
+//--------------
+modalModel(n,modeFreqs,modeRes,modeGains) = _ <: par(i,n,gain(i)*modeFilter(freqs(i),res(i))) :> _
+with{
+	freqs(i) = take(i+1,modeFreqs);
+	res(i) = take(i+1,modeRes);
+	gain(i) = take(i+1,modeGains);
 };
