@@ -1,0 +1,747 @@
+\chapter{Mission}
+\lhead{\emph{Mission}}
+
+
+In this section, the internship mission will be explained and developed. Some technical elements will be detailed : first the lecturer will have a look into the physical modelling synthesis, then he will be given some elements to understand how the Faust language works. In the third section, the core of the mission will be introduced : the \textit{pm.lib} file. In the last section the two scripts are presented and explained.
+
+\section{Physical modelling synthesis}
+
+Sound synthesis is a subject of research which occupies the time of a lot of computer music researchers. A nice view of the different digital synthesis methods is provided in \cite{soundsynthesis}, but let's quickly present some synthesis methods in this paper. The most-known synthesis technique is the additive synthesis. It is obtained by adding together several waveforms (usually harmonically related). The subtractive synthesis is obtained by filtering complex waveforms in order to remove some specific frequencies. Subtractive synthesizer can produce specify waveforms such as triangle waves, sawtooth waves or square waves which have complex frequency spectrum, so that the waveform can be filtered. The FM synthesis (frequency modulation synthesis) requires at least two signal generators. One signal is used to modify one of the characteristics of another signal, which can lead to new sound undoable in additive or subtractive synthesis. The granular synthesis is a method which manipulates very small samples to create a sound.
+The physical modelling synthesis aims to describe the phenomena of the real world in the best possible way by using physical models. In this section are explained some points of the theory, in particular how digital waveguide models work.
+
+\subsection{Principle}
+
+The physical modelling synthesis refers to a plenty of methods which enable to generate the waveform of a sound based on a mathematical model, with equations and algorithms. This model aims to describe how the sound is produced thanks to the laws of physics. The results will depend on several parameters such as the material, the instrument size or even how the musician wants to excite its instrument (plucked, stricked, bowed ...).
+There are many kinds of mathematical models for describing how the sound is generated.
+
+\subsection{Delay lines}
+
+A delay line is an elementary element which models an acoustic propagation of the sound. This element is present in most of delay-effects and digital waveguide synthesis models. A delay line inserts a time delay between its input and output, as shown in figure as shown in \ref{fig:delay-line}.
+If the input signal is denoted $x(n), n = 0, 1, 2 ...$, then the output signal $y(n)$ of an M-length delay-line is :
+
+\begin{equation}
+    \centering
+    y(n) = x(n-M), n = 0, 1, 2
+\end{equation}
+
+where $x(n) = 0$ for $n < 0$.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/delayline.png}
+    \caption{An M-sample delay line}
+    \label{fig:delay-line}
+\end{figure}
+
+We can see that the output signal is a kind of delayed version of the input signal.
+
+\subsubsection*{An example : Damped traveling waves}
+
+Figure \ref{fig:delay-line} also represents a simulation of a traveling wave which propagates in one direction. However in this form the traveling wave would never stop, so we had to add an element so take the damping factor into account. This damping factor appears at each propagation stage but it can be gather in one final damping factor. In figure \ref{fig:dampingwave}, the damping factor $g$ is merely a constant lower than zero $g < 0$ so that $g^{M} < 0, \forall M \in \mathbb{N}$ as well. If we need internal signals within this delay line, they can be tapped out and processed with correcting gains.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/dampingfactor.png}
+    \caption{A damped travelling wave with $g^{M} < 1$, $\forall M \in \mathbb{N}$}
+    \label{fig:dampingwave}
+\end{figure}
+
+This damping factor gives good results but is not that representative of the real world. A better approach is the use of digital filters $G(z)$ which implements frequency-dependent attenuation, where $|G(z)| < 1, \forall z \in \mathbb{C}$, as figure \ref{fig:dampingfilter} shows.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/dampingfilter.png}
+    \caption{A damped travelling wave using a digital filter, where $|G(z)| < 1, \forall z \in \mathbb{C}$}
+    \label{fig:dampingfilter}
+\end{figure}
+
+\subsection{Digital waveguides}
+
+A digital waveguide is defined as a bidirectional delay line with at some wave impedance R, as shown in figure \ref{fig:digitalwaveguide}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/digitalwaveguide.png}
+    \caption{A digital waveguide $N$ samples long at wave impedance $R$}
+    \label{fig:digitalwaveguide}
+\end{figure}
+
+As we can see a digital waveguide represents two traveling waves in opposite directions, since it has been proved that the vibration of an ideal string can be decomposed in two traveling waves going in opposites ways.
+This model can be used for any one-dimensional acoustic system such as strings (guitar, violin ...), bore (clarinet) or pipe (flute, trumpet).
+
+
+\subsubsection*{Output of a digital waveguide}
+The two traveling waves in a digital waveguide are just components of an acoustic vibration. We need to sum these two components to output the needed physical variable, as shown in figure \ref{fig:output2}
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/output2.png}
+    \caption{Output of a digital waveguide using taps (more detailed)}
+    \label{fig:output2}
+\end{figure}
+
+\subsubsection*{Digital waveguide inputs}
+
+Most of musical instruments need to be excited in order to generate a sound, which is modelled in digital waveguides as physical inputs. It corresponds as a disturbance of the 1D propagation medium, and has to be taken into account in both left and right directions of the digital waveguide. It can be a superimposed input (simple vision, figure \ref{fig:additiveinput}) or an interaction input (more relatistic vision, figure \ref{fig:interactioninput}). For example, plucking a string which is already vibrating (interactive input) has to be different than plucking a string at rest (interactive input with no interaction, so additive input).
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/additiveinput.png}
+    \caption{An input signal is added in one point to both waveguide components}
+    \label{fig:additiveinput}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/interactioninput.png}
+    \caption{An interactive input which takes into account the incoming waves at one point and add the result of the interaction with the input at the same point}
+    \label{fig:interactioninput}
+\end{figure}
+
+\subsection{Ideal string}
+
+An ideal vibrating string, if plucked, will vibrate forever in one plane. The wave equation which describes its movement is well-known in physics :
+
+\begin{equation*}
+    \centering
+    K \frac{\partial^{2} y}{\partial t^{2}}(t,x) = \epsilon \frac{\partial^{2} y}{\partial x^{2}}(t,x)
+\end{equation*}
+
+where $y$ is the string displacement, $K$ the string tension and $\epsilon$ the linear mass density.
+This form comes from Newton's first law, $force = mass \times acceleration$.
+
+Since d'Alembert in 1747, the solution of the later equation is known and can be expressed as :
+
+\begin{equation*}
+    \centering
+    y(t,x) = y_{r}(t-\frac{x}{c}) + y_{l}(t+\frac{x}{c})
+    \label{eq:dalembert}
+\end{equation*}
+
+where $c \triangleq \sqrt{\frac{K}{\epsilon}}$.
+
+We can see here that the equation \ref{eq:dalembert} looks like the waveguide approach, but we need to put it in a digital way. This continuous solution can be sampled to the equation \ref{eq:digitaldalembert} :
+
+\begin{equation}
+    \centering
+    \begin{align}
+        y(nT,mX) &= y_{r}(nT - mT) + y_{l}(nT + mT)\\
+                 &\triangleq y^{+}(n-m) + y^{-}(n+m)
+        \label{eq:digitaldalembert}
+    \end{align}
+\end{equation}
+
+where $T$ is the sampling interval, and $X = cT$ the spatial sampling interval in meters. 
+
+This final solution looks like the bidirectional waveguide we have seen sooner.
+
+\subsection{Rigid terminations}
+
+To achieve our string (or bore) physical model, we need to provide some information about both ends of the string, which are called terminations and which are rigid.
+At these terminations, the string cannot move, which is written as $y(t,0) = 0$ and $y(t,L) = 0$. Along with the wave equation, this yields to equation \ref{eq:digitalterminations1} and \ref{eq:digitalterminations2}:
+
+\begin{equation}
+\centering
+    y(nT,0) = y^{+}(n) + y^{-}(n) \Leftrightarrow y^{+}(n) = - y^{-}(n)
+    \label{eq:digitalterminations1}
+\end{equation}
+
+\begin{equation}
+\centering
+    y(nT,NX/2) = y^{+}(n-\frac{N}{2}) + y^{-}(n+\frac{N}{2}) \Leftrightarrow y^{+}(n+\frac{N}{2}) = - y^{-}(n+\frac{N}{2})
+    \label{eq:digitalterminations2}
+\end{equation}
+
+where $N \triangleq \frac{2L}{X}$ determines the time in samples for the wave to propagate from one end to the other, so the total delay.
+So we see that both waves are reflected with a negative coefficient which invert the waveform. Both terminations can be added to the bidirectional waveguide model in the following figure \ref{fig:terminations} :
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/terminations.png}
+    \caption{Rigidly terminated ideal string, with a displacement output at position $x = \xi$}
+    \label{fig:terminations}
+\end{figure}
+
+\subsection{Conclusion}
+This achieve the chapter about physical modeling synthesis. Only a small part of this theory is reviewed here, but it will be sufficient for understanding what will follow. The interested reader can look further information up in Julius O. Smith's book. \cite{pasp}, where most of the pictures used in this chapter come from.
+
+\section{Faust language}
+
+\subsection{Introduction}
+
+Faust (Functional Audio Stream) is a functional programming language specifically designed for real-time signal processing and synthesis. \cite{quickref}. Faust is a specification language which provides an adequate notation to describe signal processors. Most of audio devices can be described as signal processors as they take some input signals, and transform them into output signals. The Faust language is also block-diagram oriented. It combines functional programming with block-diagram algebra in order to enable the programmer to construct block-diagram easily with functions composition. Faust programs are fully compiled, the compiler translating the Faust code into C++ code.
+Faust source file take the .dsp extension, and library file take the .lib extension.
+
+\subsection{Syntax}
+
+A Faust program always contains a "main" function which is called \texttt{process} and specifies a block diagram. Here is a simple example which takes the input x and outputs the same signal x, as a simple wire in the physical world :\\
+\centerline{\texttt{process(x) = x;}}
+
+The simplest signal with only zero-value samples is written :\\
+\centerline{\texttt{process = 0;}}
+
+\subsubsection*{Operators}
+
+The "," symbol is used for putting diagrams in parallel, as if we want a stereo output signal :\\
+\centerline{\texttt{process(x,y) = x,y;}}
+
+Mathematical operators such as \texttt{+}, \texttt{-}, \texttt{*} or \texttt{/} are also seen as signal processors. For example, the \texttt{+} operator takes two input signals in parallel and provides one output signal :\\
+\centerline{\texttt{process(x,y) = x,y:+;}}\\
+The \texttt{:} symbol is used here for putting block diagrams in series. The first part consists in putting x and y into two wires and providing these two wires as inputs for the second part, the \texttt{+} operator. However, for convenience Faust enables the programmer to write \texttt{process(x,y) = x+y;}. The other symbols works the same way.
+
+An interesting symbol is \texttt{\_} which consists in a simple wire, so this does nothing to the input signal. Therefore \texttt{process(x) = x;} as seen before could be rewritten as \centerline{\texttt{process = \_;}}
+
+Now let's have a look at an important symbols in block diagrams algebra : the feedback operator \texttt{\~}, used for recursive composition. The code \\
+\centerline{\texttt{process = + \~  \_;}} provides the diagram in figure \ref{fig:recursive}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.2]{Chapters/Pictures/recursive.png}
+    \caption{Block diagram generated for the code \texttt{process = + \~  \_;}}
+    \label{fig:recursive}
+\end{figure}
+
+The feedback connects the output to the input and is a nice way for differential equations for example. The last diagram features the equation $y(n) = x(n) + y(n-1)$ where the one-sample delay (represented by the little square) is implicit and cannot be avoided.
+
+There are two other block-diagram operator, the split composition and merge composition. The split composition with the operator \texttt{<:}\\
+\centerline{\texttt{process = \_ <: \_, \_;}}
+enables the programmer to duplicate a signal into two or more identical parallel signals.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.2]{Chapters/Pictures/split.png}
+    \caption{Block diagram generated for the code \texttt{process = \_ <: \_, \_;}}
+    \label{fig:split}
+\end{figure}
+
+Inversely, the merge composition, with the operator \texttt{:>}\\
+\centerline{\texttt{process = \_, \_ :> \_}}
+provides a way to join two signals by adding them up.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.2]{Chapters/Pictures/merge.png}
+    \caption{Block diagram generated for the code \texttt{process = \_, \_ <: \_;}}
+    \label{fig:merge}
+\end{figure}
+
+
+Finally, we can implement delay in an easy way with the \texttt{@} operator.\\
+\centerline{\texttt{process(x) = x@4;}} is a processor which outputs the input signal \texttt{x} with a 4-samples delay. A one-sample delay can also be written as \texttt{x'}, equivalent to \texttt{x@1}.
+
+\subsubsection*{Functions declaration and utilisation}
+
+Functions declaration is done in a common way :
+
+\centerline{\texttt{average(x,y) = (x + y) / 2;}}
+
+where \texttt{average} is the function name, and \texttt{x} and \texttt{y} are the parameters of the function. These parameters are input signals of the corresponding signal processor which transform it into an output. Naming parameters is optional but more readable : indeed the \texttt{average} function can be written also in the following way, without specify any parameter :
+
+\centerline{\texttt{average = (\_ , \_ : +),2 : /;  }}
+
+Function parameters often do not appear in functional blocks as they are implicitly provided in the "wires" and taken into account as input for the functions. For example, using the \texttt{average} function with \texttt{$x^{2}$} instead of \texttt{x} could be written as :
+
+\centerline{\texttt{process = square,\_:average;}}
+
+where \texttt{square} would be the classic square function (\texttt{square(x) = x*x;}).
+The diagram \ref{fig:implicitparam} illustrates this later code. We see that the output of the \texttt{square} function implicitly becomes the first input of the \texttt{average} function.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.4]{Chapters/Pictures/implicitparam.png}
+    \caption{Block diagram generated for the code \texttt{process = square,\_:average;}}
+    \label{fig:implicitparam}
+\end{figure}
+
+\subsection{Libraries}
+
+The Faust language enables to include libraries as it is possible in most of programming languages. For that purpose, the \texttt{import} function is used to import definitions from other source file:
+
+\centerline{\texttt{import("math.lib");}}
+
+This library includes a lot of useful math functions.
+
+The work of the internship was mainly to go further with \texttt{pm.lib} file, which is a physical modeling synthesis library file for Faust. It will be explained in the next section.
+Moreover, some library files were used as well : \texttt{music.lib} (which imports \texttt{math.lib} and declares some useful functions for music applications as spacialisation, envelops, delays) and \texttt{filter.lib} (which declares some digital filters, reviewed in \cite{filters}).
+
+\subsection{Diagrams generation}
+
+A powerful tool provided with the Faust language is the possibility to generate block diagrams directly from the code. It takes on its full meaning as the Faust language is oriented towards processing blocks building. Such diagrams has been encountered in previous sections.
+
+To generate a block diagram, simply use the \texttt{-svg} option while using the \texttt{faust} command :
+
+\centerline{\texttt{faust -svg file.dsp}}
+
+This will create a subfolder of the current folder which contains a \texttt{.svg} (scalable vector graphics) file for each block-diagram expression of the file in question. These several \texttt{.svg} files are useful for expanding some parts of the final process, or for coming back to a more general view.
+
+
+\subsection{Example : a sine oscillator}
+
+As an example to get the lecturer more used to the Faust language, here is the sine-oscillator example taken from the official Faust website \cite{faustsine}:
+
+\begin{lstlisting}
+phasor(f)   = f/fconstant(int fSamplingFreq, <math.h>) : (+,1.0:fmod) ~ _ ;
+osc(f)      = phasor(f) * 6.28318530718 : sin;
+process     = osc(hslider("freq", 440, 20, 20000, 1)) 
+                * hslider("level", 0, 0, 1, 0.01);
+\end{lstlisting}
+
+What we want to do here is to create all samples of the sine wave, one by one, infinitely. As we cannot specify samples infinitely we will need a loop, by the use of the \texttt{\~} (feedback) operator.
+
+The phase generator creates a periodic signal between 0 to 1. The fmod function is a float modulo function, and we provide 1 as the "limit" of the modulo, i.e. \texttt{1.4 fmod 1.0 = 0.4}. So here we provide a constant \texttt{0.1} which goes through a \texttt{+} operator, then in a \texttt{fmod 1.0} operator, which output \texttt{0.1}, the first sample.. But we see the feedback loop that takes the output of \texttt{fmod} to provide it into \texttt{+}, which gives the second sample: \texttt{0.2} (after processing by fmod : \texttt{0.2 fmod 1.0 = 0.2}), and so on. When the feedback loop following by \texttt{+} gives a number more than 1.0 it is wrapped by \texttt{\~}. It finally creates the signal : \texttt{(0.1, 0.2, 0.3, 0.4, ...)}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.8]{Chapters/Pictures/phasor.png}
+    \caption{Block diagram generated for the code \texttt{0.1 : (+,1.0:fmod) \~ \_}}
+    \label{fig:phasor}
+\end{figure}
+
+The function \texttt{fconstant} aims to extract the constant \texttt{fSamplingFreq} from \texttt{math.h}. The later signal is divided by the sampling frequency to obtain a signal at . Finally we multiple this signal by the frequency parameter \texttt{f} to produce a signal at frequency \texttt{f}.
+
+\texttt{osc(f) = phasor(f) * 6.28318530718 : sin;}
+
+Now we have the phase of the oscillator, we multiply it by $2 \pi$ before putting it into the sine function.
+
+Finally, we want the user to be able to modify the input frequency, as well as the volume of the output. An interesting feature that was not presented in this section are GUI elements, like buttons, sliders, nentry (number input) ...
+Two sliders are used to control the input frequency \texttt{f} and the output volume. The input frequency slider becomes the input of the \texttt{phasor} function, and we multiply the output signal of the \texttt{oscillator} function by the volume slider (a value between \texttt{0} and \texttt{1}).
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/sineosc.png}
+    \caption{Block diagram generated for the sine oscillator code}
+    \label{fig:sineosc}
+\end{figure}
+
+The figure \ref{fig:sineosc} shows the block diagram generated for the whole code.
+
+\subsection{Conclusion}
+
+The last example shows a simple program using several tools of the Faust language. This language is really useful for processing blocks programming, so it is relevant for music application. We will now dive into the core of the internship mission, the realisation of the \texttt{pm.lib} file, which tries to implement some physical modeling synthesis features in the Faust language.
+
+\section{pm.lib, IR2dsp.py and mesh2dsp.py}
+
+In this section, we explain the main productive task of the internship which was the creation of the physical modelling library pm.lib in Faust, and two python scripts, IR2dsp.py and mesh2dsp.py. The entire code of these files can be found in the appendices.
+
+\subsection{\texttt{pm.lib}}
+
+The pm.lib file is a Faust library which includes functions to simulate some parts of instruments based on physical modelling synthesis theory, presented in the first section.
+Romain Michon, who is a Ph. D candidate at the Center for Computer Research in Music and Acoustics (CCRMA) at Stanford University, has written the Faust-STK based on the C++ synthesis tool kit in which there are some instruments based on physical models \cite{fauststk}. The library works well and is very useful, but Romain proposed me to rewrite it in a modular way : still upon physical models, the programming musician can connect different instrumental elements to recreate existing instruments or new ones, in order to extend the creative possibilities. The problem is that this kind of modular system imply bidirectional elements according to the digital waveguide model. The Faust language is built as a one-directional blocks processing language, so it was not possible to directly create bidirectional elements ready to be connected to each other. Romain started the work by cleverly simulating a chain of bidirectional elements, having input and output towards each side of the block diagram. We explain that simulation in the following subsection.
+
+Note that \texttt{filter.lib} and \texttt{music.lib} is included as we use some of their declared functions.
+
+\subsubsection*{Simulating bidirectional elements}
+
+The Faust language only proposes input from the left and output to the right, whereas we need one digital waveguide, with one input and one output from and towards each direction, as in figure \ref{fig:bidirectional}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/digitalwaveguide.png}
+    \caption{A digital waveguide as a bidirectional delay}
+    \label{fig:bidirectional}
+\end{figure}
+
+So the idea to simulate it is to move both inputs from the left, and both towards the right. The communication between two elements will be specify in the \texttt{chain} function. We also add a third input/output which is the mix of the main signal output.
+
+Given two blocks A and As, the way to chain them together is define in the \texttt{chain} function as following :
+
+\lstset{breaklines=true;}
+\begin{lstlisting}
+chain(A:As) = (crossnn(1),\_',\_ : \_,A : crossnn(1),\_,\_ : \_,chain(As) : crossnn(1),\_,\_) \~ \_ : !,\_,\_,\_;}
+\end{lstlisting}
+
+
+As this code is not easily readable, let's generate a diagram with the \texttt{-svg} option. The diagram \ref{fig:chain} shows two elements A (adding 1 to each signal) and B (adding 2 to each signal) connected together. There are three inputs/outputs, two for the bidirectional concept and a third one that mix both signals. The first input goes through a \texttt{crossnn} function which is used here to switch two incoming signal (the first signal goes to the second input and inversely), and is processed by B before being processed by A, as the right-to-left line of the bidirectional line. The second signal is processed by A then by B as the left-to-right line, but there is a \texttt{mem} element at the beginning which puts a one-sample delay to the signal. This is unavoidable, for the simple reason that if there is no delay between the two lines, we could put one block looping into itself so that the first output goes to the second input and the second output goes to the first input : this would not be computable as the Faust language calculates sample by sample.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/chain.png}
+    \caption{The \texttt{chain} function is used to chain block A and B where \texttt{A = +1,+1,+1} and \texttt{B = +2,+2,+2}}
+    \label{fig:chain}
+\end{figure}
+
+The \texttt{chain} function is also specified for one block only, which does nothing : \texttt{chain(A) = A;}.
+
+Now we have managed to specify a bidirectional connection between to block with \texttt{chain}, the other fundamental elements are easy to set up.
+
+The \texttt{input} and \texttt{output} function are also created according to the \texttt{chain} specification :
+
+\centerline{\texttt{input(x) = +(x),+(x),\_;}}
+\centerline{\texttt{output(x,y,s) = x,y,x+y+s;}}
+
+\texttt{input} merely adds a given signal to the two first inputs of one block. (figure \ref{fig:input}) \texttt{output} does nothing to the first two inputs (it outputs them without processing) but it outputs the sum of the three inputs in the third wire. (figure \ref{fig:output})
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.5]{Chapters/Pictures/input.png}
+    \caption{Diagram showing the \texttt{input} function within a chain : \texttt{process = chain(\_,\_,\_ : input(10) : \_,\_,\_);}}
+    \label{fig:input}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.4]{Chapters/Pictures/output.png}
+    \caption{Diagram showing the \texttt{output} function within a chain : \texttt{process = chain(\_,\_,\_ : input(10) : \_,\_,\_);}}
+    \label{fig:output}
+\end{figure}
+
+
+No we can input and output within a chain of blocks, we specify terminations to simulate the ends of instrument pieces such as strings or bores.
+
+\subsubsection*{Terminations}
+
+An unspecified termination is created first :
+
+\begin{lstlisting}
+terminations(a,b,c) = (_,crossnn(1),_,_ : +,+,_ : b) ~ (c,a : crossnn(1));
+\end{lstlisting}
+
+This function creates terminations on each side of a \texttt{chain} but the inputs and outputs are not closed (as we expect from a termination). Like \texttt{chain}, this function adds one sample delay to both signals of the bidirectional line.
+The \texttt{terminations} function is used that way :
+
+\texttt{rightGoingWaves,leftGoingWaves,mixedOutput : terminations(a,b,c) : rightGoingWaves,LeftGoingWaves,mixedOutput}
+where \texttt{a} and \texttt{c} are reflexion coefficients (for example $-1$) and \texttt{b} a chain of blocks.
+
+Then a full termination is specified using the \texttt{terminations} function :
+
+\begin{lstlisting}
+fullTerminations(a,b,c) = 0,0,0 : terminations(a,b,c) : !,!,_;
+\end{lstlisting}
+
+The \texttt{fullTerminations} function closes inputs and outputs of a chain, except for the third output which gives the mixed signal.
+
+Both left termination and right termination are specified as well :
+
+\begin{lstlisting}
+leftTermination(a,b) = 0,0,0 : terminations(a,b,*(0));
+rightTermination(b,c) = terminations(*(0),b,c) : !,!,_;
+\end{lstlisting}
+
+Those functions cut one end like \texttt{fullTerminations} does but leave the other end unclosed.
+
+\subsubsection*{Excitation functions}
+
+What we need to make an instrument playing a sound is an excitation. Two excitation functions have been created here : \texttt{impulseExcitation} and \texttt{acousticExcitation}.\\
+
+\begin{lstlisting}
+impulseExcitation(gate) = gate <: _,mem : - : >(0);
+\end{lstlisting}
+
+provides a dirac impulse when a gate button is triggered.\\
+
+\begin{lstlisting}
+acousticExcitation(gate,P) = noise : *(gate : trigger(P))
+with {
+     diffgtz(x) = (x-x') > 0;
+     decay(n,x) = x-(x>0)/n;
+     release(n) = + ~ decay(n);
+     trigger(n) = diffgtz : release(n) : > (0.0);
+};
+\end{lstlisting}
+
+creates a noise burst when a gate button is triggered. (full explaination can be found in \cite{lac_orlarey})
+
+\subsubsection*{Strings}
+
+Before specifying any string, we need to implement a \texttt{waveguide} function as we see in the first section.
+
+\begin{lstlisting}
+waveguide(nMax,n) = fdelay4(nMax,n),fdelay4(nMax,n),_;
+\end{lstlisting}
+
+This uses a 4th order fractional delay implemented in \texttt{filter.lib} (see \cite{filters}). \texttt{n} represents the length of the waveguide in samples, and \texttt{nMax} the maximum length of the waveguide (two parameters needed for the filter). We this \texttt{waveguide} we can implement an \texttt{idealString} function :
+
+\begin{lstlisting}
+idealString(length,reflexion,pluckPosition,x) = fullTerminations(term,wg,term)
+with{
+	nMax = 512; // each segment of the string can't be longer than that
+	N = length*SR/320-8; // length (meters) to samples
+	nUp = N/2*pluckPosition : max(1); // upper string segment length
+	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
+	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
+	term = *(-reflexion); // terminations
+};
+\end{lstlisting}
+
+This string expects some parameters :
+\begin{itemize}
+    \item \texttt{length} : the length of the string in meters
+    \item \texttt{reflexion} : the coefficient of reflexion (between 0 to less than 1 so that the string is damped)
+    \item \texttt{pluckPosition} : where the string is plucked (between 0 and 1 excluded)
+    \item \texttt{x} : the excitation input
+\end{itemize}
+
+This simulates an ideal string because of the reflexion parameter which is merely a positive coefficient less than 1.
+We see that the \texttt{fullTerminations} function is the main element of this \texttt{idealString} function. The functional block is a waveguide which has been defined previously, and both terminations reflect the wave negatively with the reflexion coefficient. We use two waveguides here : one of each side of the pluck position (two waves are created after plucking)
+
+The \texttt{length} parameter provides the way to change the frequency of the string sound. The \texttt{pluckposition} changes a bit the timbre of the sound, and the \texttt{reflexion} coefficient makes the string sounding longer when it approaches 1 (and inversely).
+
+This ideal string is interesting but not that close to the reality, because both ends of a real string instrument do not act merely as a negative coefficient. As every element in the nature, it acts as a filter, giving an output signal from an input signal. The bridge and nut of a string instrument can be simulated with a damping filter, which is a good approximation of the reality.\\
+
+\begin{lstlisting}
+dampingFilter(rho,h0,h1,x) = rho * (h0 * x' + h1*(x+x''));
+\end{lstlisting}
+
+With this filter is created a bridge simulation :\\
+
+\begin{lstlisting}
+bridge(length,B,t60,x) = dampingFilter(rho,h0,h1,x)
+with{
+	freq = 320/length;
+	h0 = (1.0 + B)/2;
+	h1 = (1.0 - B)/4;
+	rho = pow(0.001,1.0/(freq*t60));
+};
+\end{lstlisting}
+
+More natural parameter are transformed in a way that the \texttt{dampingFilter} can process with. This bridge reflexion will depend on the frequency of the string (its length) and two interesting parameters :
+\begin{itemize}
+    \item \texttt{B} : (0-0.99) the more \texttt{B} approaches 1, the more brightly the string sounds
+    \item \texttt{t60} : the decaying time of the string
+\end{itemize}
+The figure \ref{fig:bridge} (taken from \texttt{nonIdealString} diagram) helps to understand how the damping filter processes the signal.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.8]{Chapters/Pictures/bridge.png}
+    \caption{The bridge implementation using a damping filter}
+    \label{fig:bridge}
+\end{figure}
+
+Now an non ideal string can be simulated using the \texttt{bridge} function :\\
+
+\begin{lstlisting}
+nonIdealString(length,pluckPosition,B,t60,x) = fullTerminations(term,wg,term)
+with{
+	nMax = 512; // each segment of the string can't be longer than that
+	N = length*SR/320-8; // length (meters) to samples
+	nUp = N/2*pluckPosition : max(1); // upper string segment length
+	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
+	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
+	term(x) = bridge(length,B,t60,x);
+};
+\end{lstlisting}
+
+This is exactly the same as the \texttt{idealString} function except that the reflexion coefficient is replaced by the bridge which processes the incoming wave in a more naturally way. As the \texttt{bridge} function expect two new parameters that are \texttt{B} and \texttt{t60}, so does this function. This \texttt{nonIdealString} implementation sounds quite great, in a more acoustic perception.
+
+With this \texttt{nonIdealString} function we can go further and directly create two specific strings : a \texttt{nylonString} and a \texttt{steelString} :
+
+\begin{lstlisting}
+steelString(length,pluckPosition,x) = nonIdealString(length,pluckPosition,0.8,6,x);
+nylonString(length,pluckPosition,x) = nonIdealString(length,pluckPosition,0.25,4,x);
+\end{lstlisting}
+
+\texttt{B} and \texttt{t60} were chosen empirically by ear, to recreate the sound of a steel and a nylon string in the best way.
+
+\texttt{pm.lib} includes two other functions : \texttt{modeFilter} and \texttt{modalModel}, which are used by the two python scripts which are explained below, along with those two last functions.
+
+\subsubsection*{Conclusion}
+
+\texttt{pm.lib} is in its beginning, and it is foreseen to add many more functions in order to have a great number of modules which can be assembled to create instruments. However the most important bases of the library are now established and enabled to go further in the work.
+
+\subsection{\texttt{IR2dsp.py}}
+
+The idea of this script is to provide a way for a musician to create the sound of an object in Faust, giving its impulse response (IR) in parameter. The impulse response of a system is its output when it is excited with a brief impulse, ideally a Dirac function. The script is written in Python, takes several parameter including the IR, and it creates a .dsp file recreating the system behaviour in Faust. The way to do it in the script is to find the frequency peaks of the signal and to store them. We can then estimate that the signal is the sum of several bandpass filters (which are called the modes of vibration) which central frequencies are those found previously, and to recreate that filter bank in a Faust script.
+Full code can be found in appendix B.
+
+\subsubsection*{Power spectrum of the signal}
+After opening the expected sound file in a signal variable, a Fourier Fast Transform (FFT) is realised to compute the power spectrum of a given IR. 
+The figure \ref{fig:powerspectrum} shows that power spectrum computed for an IR of a glass.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.8]{Chapters/Pictures/powerspectrum.png}
+    \caption{Power spectrum in dB of an IR of a glass}
+    \label{fig:powerspectrum}
+\end{figure}
+
+The corresponding piece of code is usual :
+
+\begin{lstlisting}
+#Reading file
+(fs, x) = read(soundFile)
+
+#Normalizing sound
+x = x/max(x)
+
+#FFT
+X = np.abs(np.fft.fft(x))
+X = X/(max(X))
+
+#computing corresponding frequencies
+time_step = 1 / fs
+freqs = np.fft.fftfreq(x.size, time_step) 
+idx = np.argsort(freqs)
+
+#plot for debug
+plt.plot(freqs[idx], 20*np.log(X[idx]))
+plt.show()
+\end{lstlisting}
+
+\subsubsection*{Detecting frequency peaks}
+Now the power spectrum is computed, we need to detect at which frequencies the system responds the more. First we need some information such as the minimum peak amplitude to regard one frequency as a peak, and the minimum distance allowed between two peaks. Indeed, according to the sampling frequency, we could have the two highest frequencies within the same peak, and we do not want to count it as two peaks.
+
+\begin{lstlisting}
+#detecting peaks
+threshold = math.pow(10,float(peakThreshold)/20) #from dB to X unit
+distance = int(peakDistance)/(fs/x.size) in sample count
+indexes = peakutils.indexes(X[idx], thres=threshold, min_dist=distance)
+\end{lstlisting}
+
+The peakutils python library is used and allows to directly extract the indexes of the peaks positions in the signal. The two first lines aim to transform the user parameters into readable variable for the program. We expect the user to give more natural parameters, such as threshold in decibel and minimum distance in hertz.
+
+\subsubsection*{Computing and storing all characteristics of the filters}
+With the indexes we are able to compute three parameters which describe a bandpass filter : the central frequency, the gain and the t60 (audio decay time, the time to decay to $-60 dB$ see \cite{jost60}).
+
+\begin{lstlisting}
+
+#Storing frequencies and gains for each bp filters
+peaksFreq = []
+peaksGains = []
+nbOfPeaks = 0
+for i in indexes:
+    if freqs[idx][i] > 0:
+        peaksFreq.append(freqs[idx][i])
+        peaksGains.append(X[idx][i])
+        nbOfPeaks += 1
+peaksGains = peaksGains/(max(peaksGains))
+
+#Computing t60 values
+peakst60 = []
+for i in range(0,nbOfPeaks):
+    offset = pow(10,-3/20) #conversion of -3dB in X unit
+    peakIndex = indexes[len(indexes) - nbOfPeaks + i]
+
+    n = peakIndex
+    while X[idx][n] > (X[idx][peakIndex]*offset):
+        n = n-1
+    a = n
+
+    n = peakIndex
+    while X[idx][n] > (X[idx][peakIndex]*offset):
+        n = n+1
+    b = n
+    
+    bandwidth = (b-a)/(fs/x.size) #bandwidth in Hz
+    print bandwidth
+    peakst60.append(6.91 / fs/(1-math.exp(-math.pi*bandwidth/fs)))
+\end{lstlisting}
+
+The way to compute the t60 is quite complicated but more details can be found in Julius O. Smith's books. (\cite{digitalfilters} \cite{dftmaths}).
+
+At this stage we have three tables in the python script : a table which stores the frequency peaks, and two tables for corresponding gains and t60.
+
+\subsubsection*{Creating the \texttt{.dsp} file}
+All needed data is computed from the given IR, so the creation of the corresponding model in Faust remains. For that part we use a usual way to open and write into a file in python, with sometimes calling the three computed tables. The modelisation in Faust uses a function from \texttt{pm.lib} : \texttt{modalModel} which generates a bandpass filterbank with frequencies, gains and t60.
+
+\begin{lstlisting}
+//---modalModel--
+// n : number of passband filters
+// modeFreqs : list of modal frequencies
+// modeGains : list of gains corresponding to the frequencies
+// modeT60 : list of t60 corresponding to the frequencies
+//--------------
+modalModel(n,modeFreqs,modeGains,modeT60) = _ <: par(i,n,gain(i)*modeFilter(freqs(i),t60(i))) :> _
+with{
+	freqs(i) = take(i+1,modeFreqs);
+	gain(i) = take(i+1,modeGains);
+	t60(i) = take(i+1,modeT60);
+};
+\end{lstlisting}
+
+\texttt{modeFilter} (see appendix A) is a 2nd order direct form filter (see \cite{digitalfilters}). \texttt{modalModel} simply puts some of this filter in parallel using the three given parameters. In that way, we have managed to reconstruct the IR signal using a bandpass filterbank.
+Below is an example of the Faust code generated by the \texttt{IR2dsp.py} script (see its diagram in figure \ref{fig:filterbankdiagram}.
+
+\begin{lstlisting}
+import("architecture/pm.lib");
+import("music.lib");
+
+pi = 4*atan(1.0);
+nModes = 6;
+modeFrequencies = (532.601351351, 920.27027027, 2840.87837838, 6806.25, 6934.96621622, 7042.90540541);
+massEigenValues = (0.0388805406054, 0.0338179522812, 1.0, 0.0929655162617, 0.228455685234, 0.0407576980285);
+t60 = (0.0697422669941, 0.0465209840273, 0.139406145263, 0.0385136491875, 0.0446632820508, 0.0211090511497);
+modeFreqs = par(i,nModes,take(i+1,modeFrequencies));
+modeGains = par(i,nModes,take(i+1,massEigenValues));
+modeT60 = par(i,nModes,take(i+1,t60));
+son = modalModel(nModes,modeFrequencies,modeGains,modeT60);
+gate = button("gate");
+process = impulseExcitation(gate) : son <: _,_;
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.4]{Chapters/Pictures/filterbankdiagram.png}
+    \caption{Diagram of the filterbank generated by the script, for a glass sound}
+    \label{fig:filterbankdiagram}
+\end{figure}
+
+When compiled, the program provide one button which triggers the impulse excitation into the modal model, and that reproduces the impulsive sound of the given object.
+
+Besides, a help is provided while running the command \texttt{python -h script.py}.
+
+\subsubsection*{Conclusion}
+This script works well, and the several tests we did are satisfying : the different objets sounds quite closely from the reality, even if the raw tapped sounds were more or less similar for the ear.
+
+\subsection{\texttt{mesh2dsp.py}}
+
+The goal of this script is really interesting. Given a geometric file (\texttt{.stl} file) which only specify the shape of an object, we compute a modal analysis using the finite element method and then we write the faust file as done in \texttt{IR2dsp.py}. Before explaining how the script is written, we precise that it does not work the way we want due to a lot of difficulties we encountered. The conclusion cites those issues.
+
+\subsubsection*{Elmer}
+
+The finite element method (FEM) is provided by Elmer, an open source multiphysical simulation software developed by CSC \cite{elmerwebsite}. We can use Elmer in command line so its interesting for our script. For the analysis, we need to provide a \texttt{.sif} file which contains some directions for Elmer to do its FEM. To do the FEM analysis, Elmer needs a mesh file, a 3d object which divides the geometric object into small elements. The software ElmerGrid can convert a mesh file into a Elmer supported mesh.
+
+First of all, we need to convert the \texttt{.stl} file into a Elmer supported mesh file. This was a first issue in the process : for now no method was found to convert a \texttt{.stl} file into a mesh without doing it manually in a specific software. Moreover, ElmerGrid was not completely reliable when used in command line, so we had to do it manually. Finally the input file for the script has to be the name of the folder containing four Elmer supported mesh files (\texttt{mesh.boundary}, \texttt{mesh.elements}, \texttt{mesh.header}  \texttt{mesh.nodes}).
+
+Then the \texttt{.sif} file is created with all information needed for the FEM analysis. When executing the script the user has to provide 3 parameters to inform about the considered material to consider for the analysis, which will appear in the \texttt{.sif} file :and
+\begin{itemize}
+    \item the Young modulus
+    \item the Poisson coefficient
+    \item the density
+\end{itemize}
+
+Finally without a terminal we can call ElmerSolver to go for the FEM analysis, giving the \texttt{.sif} file (which contains the path to the mesh files) :
+
+\begin{lstlisting}
+output = subprocess.check_output(["ElmerSolver case.sif"], shell=True)
+\end{lstlisting}
+
+\subsubsection*{Extracting modal frequencies from ElmerSolver output}
+
+ElmerSolver output is quite verbose so we need to parse it in order to extract the eigen values computed by the FEM analysis.
+
+\begin{lstlisting}
+#Extracting the list of eigen values
+eigenVS = re.findall("\d+\.\d+", output)
+eigenV = [float('%.3f'%float((x))) for x in eigenVS]
+eigenV = filter(lambda s: s != 0.0, eigenV)
+\end{lstlisting}
+
+We use python functions from strings and a regular expression to find our useful information. Finally, \texttt{eigenV} contains all computed eigen values.
+Then we just transform those eigen values into frequencies.
+
+\begin{lstlisting}
+frequencies = [math.sqrt(x)/(2*math.pi) for x in eigenV]
+\end{lstlisting}
+
+Now we have the frequencies, the bandpass filters need gains and t60 values. As the t60 is not possible to compute from a FEM analysis, we let the user provide it as an input for the script, so he can play with the duration of the sound.
+For the gains which represents the mass of each eigen value in the FEM analysis, we were not be able to find out how to compute it with ElmerSolver unfortunately.
+
+\subsubsection*{Creating the \texttt{.dsp} file}
+
+This is exactly the same way we did in \texttt{IR2dsp.py} script, as we have three tables of frequencies, gains and t60.
+
+\subsubsection*{Conclusion}
+
+This script is based on a nice idea : ideally we provide a geometric shape and we are able to generate the sound of it when struck, depending on the concerned material.
+However a lot of issues remain in the script :
+
+\begin{itemize}
+    \item We did not find a effective way to transform a \texttt{.stl} file into Elmer supported mesh files so that part has to be done manually for now
+    \item We did not find how to extract eigen value mass participation from ElmerSolver in the FEM analysis. It is an important issue because when reconstructing the behaviour of the object with a bandpass filterbank, each filter will have the same participation so the final result will not sound closely enough.
+    \item Another important issue is that in the \texttt{.sif} file we provide some boundary condition. For example in the case of a string (a very long rectilinear cylinder), both end of the cylinder will not move during during the FEM analysis. This is very important to well specify those boundary conditions, but depending on the mesh files provided to ElmerSolver the boundary number will vary, so it is complicated to automatically find whichone are concerned by the conditions, and how many boundaries need this treatment.
+\end{itemize}
+
+The fact that Elmer is a free open source software play an important role in the fact that we did not manage to succeed in every step of the script.
