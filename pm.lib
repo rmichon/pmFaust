@@ -1,7 +1,30 @@
 // # `pm.lib`: Physical Modeling Library
 
-import("filter.lib");
-import("music.lib");
+import("stdfaust.lib");
+
+/*
+TODO:
+	- It'd be cool to have a version of the block diagram generator that automatically flips
+	things based on the use of chains, etc.
+	- 
+*/
+
+//--------------feedback----------
+// Syntactic sugar for `A~B`.
+//
+// #### Usage
+//
+// Example of a simple integrator:
+//
+// ```
+// _ : feedback(+,p) : _
+// ```
+//
+// Where:
+//
+// * `p`: the pole
+//-------------------------------
+feedback(A,B) = A~B;
 
 //-------chain(A:B:...)----------
 // Creates a chain of bidirectional blocks. 
@@ -10,7 +33,9 @@ import("music.lib");
 // third input/output is the mix of the main signal output. The implied one sample delay
 // created by the `~` operator is generalized to the left and right going waves. Thus, n
 // blocks in `chain()` will add an n samples delay to both the left and right going waves.
-// ### Usage
+//
+// #### Usage
+//
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : chain(A:B) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
@@ -18,21 +43,60 @@ import("music.lib");
 //		B = _,_,_;
 // };
 // ```
-// ### Requires
-// `filter.lib` (`crossnn`)
 //-----------------------------
-chain(A:As) = (crossnn(1),_',_ : _,A : crossnn(1),_,_ : _,chain(As) : crossnn(1),_,_) ~ _ : !,_,_,_;
+chain(A:As) = feedback(((ro.crossnn(1),_',_ : _,A : ro.crossnn(1),_,_ : _,chain(As) : ro.crossnn(1),_,_)), _) : !,_,_,_;
 chain(A) = A;
 
-//-------input(x)--------------
-// Adds a waveguide input anywhere between 2 blocks in a chain of blocks (see `chain()`).
-// ### Usage
+//-------inputLeftW--------------
+// Adds a `x` to left going waves anywhere in a chain of blocks (see `chain()`).
+//
+// #### Usage
+//
+// ```
+// string(x) = chain(A:inputLeftW(x):B)
+// ```
+//
+// Where
+//
+// * `x`: the input signal to be added to the chain. 
+//--------------------------------
+inputLeftW(x) = +(x),_,_;
+
+//-------inputRightW--------------
+// Adds a `x` to right going waves anywhere in a chain of blocks (see `chain()`).
+//
+// #### Usage
+//
+// ```
+// string(x) = chain(A:inputRightW(x):B)
+// ```
+//
+// Where
+//
+// * `x`: the input signal to be added to the chain. 
+//--------------------------------
+inputRightW(x) = _,+(x),_;
+
+//-------input--------------
+// Adds a `x` to left and right going waves anywhere in a chain of blocks (see `chain()`).
+//
+// #### Usage
+//
 // ```
 // string(x) = chain(A:input(x):B)
 // ```
-// Where `x` is the input signal to be added to the chain. 
-//-----------------------------
+//
+// Where
+//
+// *`x`: the input signal to be added to the chain. 
+//--------------------------------
 input(x) = +(x),+(x),_;
+
+// TODO doc
+outputLeftW(x,y,s) = x,y,x+s;
+
+// TODO doc
+outputRightW(x,y,s) = x,y,y+s;
 
 //-------output()--------------
 // Adds a waveguide output anywhere between 2 blocks in a chain of blocks and sends it 
@@ -60,24 +124,7 @@ output(x,y,s) = x,y,x+y+s;
 // ### Requires
 // `filter.lib` (`crossnn`)
 //----------------------------------------
-terminations(a,b,c) = (_,crossnn(1),_,_ : +,+,_ : b) ~ (c,a : crossnn(1)); // adds 2 samples to the loop!
-
-//-------fullTerminations(a,b,c)----------
-// Same as `terminations()` but closes the inputs and outputs of the bidirectional chain
-// (only the mixed output remains).
-// ### Usage
-// ```
-// terminations(a,b,c) : _
-// with{
-//		a = *(-1); // left termination
-//		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
-//		c = *(-1); // right termination
-// };
-// ```  
-// ### Requires
-// `filter.lib` (`crossnn`)
-//----------------------------------------
-fullTerminations(a,b,c) = 0,0,0 : terminations(a,b,c) : !,!,_;
+terminations(a,b,c) = feedback((_,ro.crossnn(1),_,_ : +,+,_ : b), (a,c : ro.crossnn(1))); // adds 2 samples to the loop!
 
 //-------leftTermination(a,b)----------
 // Creates a termination on the left side of a `chain()` without closing the inputs and 
@@ -94,7 +141,8 @@ fullTerminations(a,b,c) = 0,0,0 : terminations(a,b,c) : !,!,_;
 // ### Requires
 // `filter.lib` (`crossnn`)
 //----------------------------------------
-leftTermination(a,b) = 0,0,0 : terminations(a,b,*(0));
+//leftTermination(a,b) = 0,0,0 : terminations(a,b,*(0));
+leftTermination(a,b) = terminations(a,b,*(0));
 
 //-------rightTermination(b,c)----------
 // Creates a termination on the right side of a `chain()` without closing the inputs and 
@@ -111,7 +159,31 @@ leftTermination(a,b) = 0,0,0 : terminations(a,b,*(0));
 // ### Requires
 // `filter.lib` (`crossnn`)
 //----------------------------------------
-rightTermination(b,c) = terminations(*(0),b,c) : !,!,_;
+//rightTermination(b,c) = terminations(*(0),b,c) : !,!,_;
+rightTermination(b,c) = terminations(*(0),b,c);
+
+// TODO doc
+closeLeft = 0,0,0;
+
+// TODO doc
+closeRight = !,!,_;
+
+//-------fullTerminations(a,b,c)----------
+// Same as `terminations()` but closes the inputs and outputs of the bidirectional chain
+// (only the mixed output remains).
+// ### Usage
+// ```
+// terminations(a,b,c) : _
+// with{
+//		a = *(-1); // left termination
+//		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
+//		c = *(-1); // right termination
+// };
+// ```  
+// ### Requires
+// `filter.lib` (`crossnn`)
+//----------------------------------------
+fullTerminations(a,b,c) = closeLeft : terminations(a,b,c) : closeRight;
 
 //-------waveguide(nMax,n)----------
 // A simple waveguide block based on a 4th order fractional delay.
@@ -125,7 +197,7 @@ rightTermination(b,c) = terminations(*(0),b,c) : !,!,_;
 // ### Requires
 // `filter.lib` (`fdelay4`)
 //----------------------------------
-waveguide(nMax,n) = fdelay4(nMax,n),fdelay4(nMax,n),_;
+waveguide(nMax,n) = de.fdelay4(nMax,n),de.fdelay4(nMax,n),_;
 
 //-------idealString(length,reflexion,xPosition,x)----------
 // An ideal string with rigid terminations and where the plucking position and the 
@@ -145,7 +217,7 @@ waveguide(nMax,n) = fdelay4(nMax,n),fdelay4(nMax,n),_;
 idealString(length,reflexion,pluckPosition,x) = fullTerminations(term,wg,term)
 with{
 	nMax = 512; // each segment of the string can't be longer than that
-	N = length*SR/320-8; // length (meters) to samples
+	N = length*ma.SR/320-8; // length (meters) to samples
 	nUp = N/2*pluckPosition : max(1); // upper string segment length
 	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
 	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
@@ -153,6 +225,7 @@ with{
 };
 
 //-------dampingFilter(rho,h0,h1,x)--------------------
+// TODO
 //-----------------------------------------------------
 dampingFilter(rho,h0,h1,x) = rho * (h0 * x' + h1*(x+x''));
 
@@ -237,7 +310,7 @@ impulseExcitation(gate) = gate <: _,mem : - : >(0);
 // ### Requires
 // 'music.lib' (noise)
 //--------------------------------------
-acousticExcitation(gate,P) = noise : *(gate : trigger(P))
+acousticExcitation(gate,P) = no.noise : *(gate : trigger(P))
 with {
      diffgtz(x) = (x-x') > 0;
      decay(n,x) = x-(x>0)/n;
