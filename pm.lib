@@ -9,6 +9,27 @@ TODO:
 	- 
 */
 
+//=============================Global Variables===========================================
+// TODO
+//========================================================================================
+
+// TODO doc
+maxDel = 2048;
+
+// TODO doc
+speedOfSound = 340;
+
+//================================Concversion Tools=======================================
+// TODO
+//========================================================================================
+
+// TODO doc
+f2l(freq) = speedOfSound/freq;
+
+//=============================Bidirectional Utilities====================================
+// TODO
+//========================================================================================
+
 //--------------feedback----------
 // Syntactic sugar for `A~B`.
 //
@@ -44,7 +65,7 @@ feedback(A,B) = A~B;
 // };
 // ```
 //-----------------------------
-chain(A:As) = feedback(((ro.crossnn(1),_',_ : _,A : ro.crossnn(1),_,_ : _,chain(As) : ro.crossnn(1),_,_)), _) : !,_,_,_;
+chain(A:As) = ((ro.crossnn(1),_',_ : _,A : ro.crossnn(1),_,_ : _,chain(As) : ro.crossnn(1),_,_)) ~ _ : !,_,_,_;
 chain(A) = A;
 
 //-------inputLeftW--------------
@@ -60,7 +81,7 @@ chain(A) = A;
 //
 // * `x`: the input signal to be added to the chain. 
 //--------------------------------
-inputLeftW(x) = +(x),_,_;
+inLeftWave(x) = +(x),_,_;
 
 //-------inputRightW--------------
 // Adds a `x` to right going waves anywhere in a chain of blocks (see `chain()`).
@@ -75,7 +96,7 @@ inputLeftW(x) = +(x),_,_;
 //
 // * `x`: the input signal to be added to the chain. 
 //--------------------------------
-inputRightW(x) = _,+(x),_;
+inRightWave(x) = _,+(x),_;
 
 //-------input--------------
 // Adds a `x` to left and right going waves anywhere in a chain of blocks (see `chain()`).
@@ -90,13 +111,13 @@ inputRightW(x) = _,+(x),_;
 //
 // *`x`: the input signal to be added to the chain. 
 //--------------------------------
-input(x) = +(x),+(x),_;
+in(x) = +(x),+(x),_;
 
 // TODO doc
-outputLeftW(x,y,s) = x,y,x+s;
+outLeftWave(x,y,s) = x,y,x+s;
 
 // TODO doc
-outputRightW(x,y,s) = x,y,y+s;
+outRightWave(x,y,s) = x,y,y+s;
 
 //-------output()--------------
 // Adds a waveguide output anywhere between 2 blocks in a chain of blocks and sends it 
@@ -106,13 +127,15 @@ outputRightW(x,y,s) = x,y,y+s;
 // chain(A:output:B)
 // ```
 //-----------------------------
-output(x,y,s) = x,y,x+y+s;
+out(x,y,s) = x,y,x+y+s;
 
 //-------terminations(a,b,c)--------------
 // Creates terminations on both sides of a `chain()` without closing the inputs and 
 // outputs of the bidirectional signals chain. As for `chain()`, this function adds a 1
 // sample delay to the bidirectional signal both ways.
+//
 // ### Usage
+//
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(a,b,c) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
@@ -121,16 +144,16 @@ output(x,y,s) = x,y,x+y+s;
 //		c = *(-1); // right termination
 // };
 // ```  
-// ### Requires
-// `filter.lib` (`crossnn`)
 //----------------------------------------
-terminations(a,b,c) = feedback((_,ro.crossnn(1),_,_ : +,+,_ : b), (a,c : ro.crossnn(1))); // adds 2 samples to the loop!
+terminations(a,b,c) = (_,ro.crossnn(1),_,_ : +,+,_ : b) ~ (a,c : ro.crossnn(1)); // adds 2 samples to the loop!
 
 //-------leftTermination(a,b)----------
 // Creates a termination on the left side of a `chain()` without closing the inputs and 
 // outputs of the bidirectional signals chain. This function adds a 1 sample delay near
 // the termination.
+//
 // ### Usage
+//
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(a,b) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
@@ -138,17 +161,16 @@ terminations(a,b,c) = feedback((_,ro.crossnn(1),_,_ : +,+,_ : b), (a,c : ro.cros
 //		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
 // };
 // ```  
-// ### Requires
-// `filter.lib` (`crossnn`)
 //----------------------------------------
-//leftTermination(a,b) = 0,0,0 : terminations(a,b,*(0));
-leftTermination(a,b) = terminations(a,b,*(0));
+lTermination(a,b) = (ro.crossnn(1),_,_ : _,+,_ : b) ~ a;
 
-//-------rightTermination(b,c)----------
+//-------rTermination(b,c)----------
 // Creates a termination on the right side of a `chain()` without closing the inputs and 
 // outputs of the bidirectional signals chain. This function adds a 1 sample delay near
 // the termination.
+//
 // ### Usage
+//
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(b,c) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
@@ -159,8 +181,7 @@ leftTermination(a,b) = terminations(a,b,*(0));
 // ### Requires
 // `filter.lib` (`crossnn`)
 //----------------------------------------
-//rightTermination(b,c) = terminations(*(0),b,c) : !,!,_;
-rightTermination(b,c) = terminations(*(0),b,c);
+rTermination(b,c) = (_,_,_,_ : +,_,_ : b) ~ (!,c);
 
 // TODO doc
 closeLeft = 0,0,0;
@@ -168,22 +189,13 @@ closeLeft = 0,0,0;
 // TODO doc
 closeRight = !,!,_;
 
-//-------fullTerminations(a,b,c)----------
-// Same as `terminations()` but closes the inputs and outputs of the bidirectional chain
-// (only the mixed output remains).
-// ### Usage
-// ```
-// terminations(a,b,c) : _
-// with{
-//		a = *(-1); // left termination
-//		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
-//		c = *(-1); // right termination
-// };
-// ```  
-// ### Requires
-// `filter.lib` (`crossnn`)
-//----------------------------------------
-fullTerminations(a,b,c) = closeLeft : terminations(a,b,c) : closeRight;
+// TODO doc
+endChain(b) = closeLeft : b : closeRight;
+
+
+//==================================Basic Elements========================================
+// TODO
+//========================================================================================
 
 //-------waveguide(nMax,n)----------
 // A simple waveguide block based on a 4th order fractional delay.
@@ -192,12 +204,60 @@ fullTerminations(a,b,c) = closeLeft : terminations(a,b,c) : closeRight;
 // rightGoingWaves,leftGoingWaves,mixedOutput : waveguide(nMax,n) : rightGoingWaves,leftGoingWaves,mixedOutput
 // ```
 // With: 
-// * `nMax`: the maximum length of the waveguide in samples
+// * `nMax`: the maximum length of the waveguide in samples and as a power of 2
 // * `n` the length of the waveguide in samples. 
 // ### Requires
 // `filter.lib` (`fdelay4`)
 //----------------------------------
-waveguide(nMax,n) = de.fdelay4(nMax,n),de.fdelay4(nMax,n),_;
+waveguideUd(nMax,n) = par(i,2,de.delay(nMax,n)),_;
+waveguideFd(nMax,n) = par(i,2,de.fdelay(nMax,n)),_;
+waveguideFd2(nMax,n) = par(i,2,de.fdelay2(nMax,n)),_;
+waveguideFd4(nMax,n) = par(i,2,de.fdelay4(nMax,n)),_;
+waveguide(nMax,n) = waveguideFd4(nMax,n);
+
+// TODO doc
+ksReflexionFilter = _ <: (_+_')/2;
+
+//=====================================Strings============================================
+// TODO
+//========================================================================================
+
+// TODO doc
+ksString(length,damping,excitation) = endChain(ksChain)
+with{
+	delTuning = 3;
+	delLength = length*ma.SR/speedOfSound/2 - delTuning;
+	refCoef = (1-damping)*0.2+0.8;
+	refFilter = ksReflexionFilter*refCoef;
+	ksChain = terminations(_,chain(in(excitation) : waveguide(maxDel,delLength) : out),refFilter);
+};
+
+//=====================================Excitations========================================
+// TODO
+//========================================================================================
+
+//-------impulseExcitation(gate)--------------
+// Creates an impulse excitation of one sample, from a gate button when it is triggered.
+// ### Usage
+// ```
+// gate = button('gate');
+// impulseExcitation(gate) : chain;
+// ```
+// With:
+// * `gatè: a gate button
+//--------------------------------------
+impulseExcitation(trigger) = trigger : ba.impulsify;
+
+
+
+
+
+
+
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// OLD SECTIONS BEYOND THIS MARK
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 //-------idealString(length,reflexion,xPosition,x)----------
 // An ideal string with rigid terminations and where the plucking position and the 
@@ -284,17 +344,6 @@ with{
 	};
 };
 
-//-------impulseExcitation(gate)--------------
-// Creates an impulse excitation of one sample, from a gate button when it is triggered.
-// ### Usage
-// ```
-// gate = button('gate');
-// impulseExcitation(gate) : chain;
-// ```
-// With:
-// * `gatè: a gate button
-//--------------------------------------
-impulseExcitation(gate) = gate <: _,mem : - : >(0);
 
 //-------acousticExcitation(gate,P)-------------
 // Creates an acoustic excitation (a noise burst) when a gate button is triggered.
