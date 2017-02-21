@@ -47,6 +47,9 @@ f2l(freq) = speedOfSound/freq;
 //-------------------------------
 feedback(A,B) = A~B;
 
+// TODO doc
+basicBlock = _,_,_;
+
 //-------chain(A:B:...)----------
 // Creates a chain of bidirectional blocks. 
 // Blocks must have 3 inputs and outputs. The first input/output correspond to the left 
@@ -216,6 +219,15 @@ waveguideFd4(nMax,n) = par(i,2,de.fdelay4(nMax,n)),_;
 waveguide(nMax,n) = waveguideFd4(nMax,n);
 
 // TODO doc
+openString(length) = waveguide(maxDel,n)
+with{
+	n = length*ma.SR/speedOfSound/2;
+};
+
+// TODO doc
+openTube = openString;
+
+// TODO doc
 ksReflexionFilter = _ <: (_+_')/2;
 
 //=====================================Strings============================================
@@ -225,11 +237,11 @@ ksReflexionFilter = _ <: (_+_')/2;
 // TODO doc
 ksString(length,damping,excitation) = endChain(ksChain)
 with{
-	delTuning = 3;
-	delLength = length*ma.SR/speedOfSound/2 - delTuning;
+	lengthTuning = 0.94;
+	tunedLength = length*lengthTuning;
 	refCoef = (1-damping)*0.2+0.8;
 	refFilter = ksReflexionFilter*refCoef;
-	ksChain = terminations(_,chain(in(excitation) : waveguide(maxDel,delLength) : out),refFilter);
+	ksChain = terminations(_,chain(in(excitation) : openString(tunedLength) : out),refFilter);
 };
 
 //=====================================Excitations========================================
@@ -303,6 +315,7 @@ dampingFilter(rho,h0,h1,x) = rho * (h0 * x' + h1*(x+x''));
 // ### Requires
 // `filter.lib`
 //------------------------------------------------------
+/*
 bridge(length,B,t60,x) = dampingFilter(rho,h0,h1,x)
 with{
 	freq = 320/length;
@@ -310,6 +323,7 @@ with{
 	h1 = (1.0 - B)/4;
 	rho = pow(0.001,1.0/(freq*t60));
 };
+*/
 
 //-------steelString-----------------------------
 //-----------------------------------------------

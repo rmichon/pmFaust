@@ -1,25 +1,99 @@
 import("stdfaust.lib");
 import("../pm.lib");
 
+// TODO: Now "real" plucked string goes here
 
 
+/*
+bowTable(offset,slope) = pow(abs(sample) + 0.75, -4) : min(1)
+with{
+	sample = +(offset)*slope;
+};
+
+bow(bowPressure) = bowTable(0,tableSlope)
+with{
+	tableSlope = 5 - (4*bowPressure);
+};
+
+rStringRigidTermination = rTermination(basicBlock,*(-1));
+
+lStringRigidTermination = lTermination(*(-1),basicBlock);
+
+nut = lStringRigidTermination;
+
+multStringNut(nStrings) = par(i,nStrings,nut);
+
+bridge(reflexion,absorption) = rTermination(basicBlock,reflectance) : _,transmittance,_
+with{
+	// absorption is typically 0.6
+	reflectance = *(-reflexion) : si.smooth(absorption);
+	transmittance = _; // TODO: should be the inverse of refelctance	
+};
+
+
+// TODO misssing sympathetic resonances
+multStringBridge(nStrings,reflexion,absorption) = par(i,nStrings,singleBridge(reflexion,absorption)) :> _,_,_;
+
+violinBody = reflectance,transmittance,_
+with{
+	transmittance = fi.resonbp(500,2,1);
+	reflectance = _;
+};
+
+interact(b) = (_,_ <: b,_,_ :> _,_),_;
+
+bowInteraction(bowPressure,bowVelocity) = interact(bowSystem) 
+with{
+	bowSystem = + : bowVelocity-_ <: *(bow(bowPressure)) <: _,_;
+};
+
+// TODO: freq for other models for high level
+bowedStringModel(bowPressure,bowVelocity,bridgeReflexion,s,bowPosition,stringLength) = endChain(modelChain)
+with{
+	ntbd = stringLength*bowPosition;
+	btbd = stringLength*(1-bowPosition);
+	modelChain = chain(
+			   nut :
+			   openString(ntbd) :
+			   bowInteraction(bowPressure,bowVelocity) :
+			   openString(btbd) :
+			   bridge(bridgeReflexion,bridgeAbsorption) :
+			   violinBody :
+			   out
+	);
+};
+
+bowVel = hslider("bowVel",0,0,1,0.01) : si.smoo;
+bowPress = hslider("bowPress",0.5,0,1,0.01);
+bridgeReflexion = hslider("bridgeReflexion",0.95,0,1,0.01);
+bridgeAbsorption = hslider("bridgeAbsorption",0.6,0,1,0.01);
+length = hslider("length",0.75,0,1,0.01);
+
+process = bowedStringModel(bowPress,bowVel,bridgeReflexion,bridgeAbsorption,0.7,length) <: _,_;
+*/
 
 ////////////////////////////////////////////////////////
 // CLARINET MODEL STUFF -> SHOULD MOVE THE PM.LIB
 ////////////////////////////////////////////////////////
 
-reed(offset,slope) = reedTable : min(1) : max(-1)
+/*
+reedTable(offset,slope) = reedTable : min(1) : max(-1)
 with {
 	reedTable = *(slope) + offset;
 };
 
-clarinetReed(stiffness) = *(-1) <: *(reed(0.7,tableSlope))
+clarinetReed(stiffness) = reedTable(0.7,tableSlope)
 with{
 	tableSlope = -0.44 + 0.26*stiffness;
 };
 
+clarinetMouthPiece(reedStiffness,pressure) = lTermination(reedInteraction,in(pressure))
+with{
+	reedInteraction = *(-1) <: *(clarinetReed(reedStiffness));
+};
+
 // wood brass bell
-wbBell(opening) = si.smooth(opening);
+wbBell(opening) = rTermination(basicBlock,si.smooth(opening));
 
 // TODO may be add lowpass on noise
 blower(pressure,breathGain,breathCutoff) = pressure + breathNoise
@@ -36,10 +110,14 @@ with{
 
 singleReedMod(length,pressure,reedStiffness,bellOpening) = endChain(modelChain)
 with{
-	delTuning = 3;
-	delLength = length*ma.SR/speedOfSound/2 - delTuning;
+	lengthTuning = 0.95;
+	tunedLength = length*lengthTuning;
 	bore = waveguide(maxDel,delLength);
-	modelChain = terminations( clarinetReed(reedStiffness), chain( in(pressure) : bore : out ), wbBell(bellOpening) );
+	modelChain = 
+			   chain(
+					clarinetMouthPiece(reedStiffness,pressure) :
+					openTube(tunedLength) :
+			  		 wbBell(bellOpening) : out );
 };
 
 singleReedMod_ui(pressure) =  singleReedMod(tubeLength,pressure,reedStiffness,bellOpening)*0.9
@@ -77,6 +155,8 @@ clarinetInstr_demo = hgroup("clarinet",blower_ui : singleReedMod_ui);
 // clarinet MIDI instr goes here
 
 process = singleReedMIDI <: _,_;
+*/
+
 
 //////////////////////////////////////////////////////////////
 // END OF CLARINET MODEL STUFF -> SHOULD MOVE THE PM.LIB
