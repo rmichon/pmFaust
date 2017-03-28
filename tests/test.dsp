@@ -1,6 +1,8 @@
 import("stdfaust.lib");
 import("../pm.lib");
 
+//process = waveguide(512,8);
+
 // TODO: Now "real" plucked string goes here
 
 
@@ -48,10 +50,12 @@ with{
 };
 
 // TODO: freq for other models for high level
-bowedStringModel(bowPressure,bowVelocity,bridgeReflexion,s,bowPosition,stringLength) = endChain(modelChain)
+bowedStringModel(bowPressure,bowVelocity,bridgeReflexion,bridgeAbsorption,bowPosition,stringLength) = endChain(modelChain)
 with{
-	ntbd = stringLength*bowPosition;
-	btbd = stringLength*(1-bowPosition);
+	stringTuning = 0.95;
+	stringL = stringLength*stringTuning;
+	ntbd = stringL*bowPosition;
+	btbd = stringL*(1-bowPosition);
 	modelChain = chain(
 			   nut :
 			   openString(ntbd) :
@@ -65,18 +69,19 @@ with{
 
 bowVel = hslider("bowVel",0,0,1,0.01) : si.smoo;
 bowPress = hslider("bowPress",0.5,0,1,0.01);
+bowPos = hslider("bowPos",0.7,0,1,0.01);
 bridgeReflexion = hslider("bridgeReflexion",0.95,0,1,0.01);
 bridgeAbsorption = hslider("bridgeAbsorption",0.6,0,1,0.01);
 length = hslider("length",0.75,0,1,0.01);
 
-process = bowedStringModel(bowPress,bowVel,bridgeReflexion,bridgeAbsorption,0.7,length) <: _,_;
+process = bowedStringModel(bowPress,bowVel,bridgeReflexion,bridgeAbsorption,bowPos,length) <: _,_;
 */
 
 ////////////////////////////////////////////////////////
 // CLARINET MODEL STUFF -> SHOULD MOVE THE PM.LIB
 ////////////////////////////////////////////////////////
 
-/*
+
 reedTable(offset,slope) = reedTable : min(1) : max(-1)
 with {
 	reedTable = *(slope) + offset;
@@ -112,8 +117,7 @@ singleReedMod(length,pressure,reedStiffness,bellOpening) = endChain(modelChain)
 with{
 	lengthTuning = 0.95;
 	tunedLength = length*lengthTuning;
-	bore = waveguide(maxDel,delLength);
-	modelChain = 
+		modelChain = 
 			   chain(
 					clarinetMouthPiece(reedStiffness,pressure) :
 					openTube(tunedLength) :
@@ -155,7 +159,7 @@ clarinetInstr_demo = hgroup("clarinet",blower_ui : singleReedMod_ui);
 // clarinet MIDI instr goes here
 
 process = singleReedMIDI <: _,_;
-*/
+
 
 
 //////////////////////////////////////////////////////////////
