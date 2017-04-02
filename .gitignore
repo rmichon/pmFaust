@@ -4,3 +4,4 @@ lac2017.pdf
 *.log
 *.bbl
 *.blg
+tests/test
