@@ -3,32 +3,33 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{courier}
+\usepackage{url}
 \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
 \sloppy
 \newenvironment{contentsmall}{\small}
 
-\title{Impulse-Response- and CAD-Model-Based \\ Physical Modeling in Faust}
+\title{Impulse-Response and CAD-Model-Based \\ Physical Modeling in Faust}
 
 %see lac2015.sty for how to format multiple authors!
-%\author
-%{Pierre-Amaury GRUMIAUX${}^1$, Romain MICHON${}^2$,\\ 
-%\textbf{Emilio GALLEGO ARIAS}${}^1$\textbf{, and Pierre JOUVELOT}${}^1$
-%\\ ${}^1$MINES ParisTech, PSL Research University, France  
-%\\ ${}^2$CCRMA, Stanford University, USA
-%}
-
 \author
-{Pierre-Amaury Grumiaux, 
-	\\\textbf{Emilio GALLEGO ARIAS,} 
-	\\\textbf{Pierre JOUVELOT}
-	\\ MINES ParisTech, PSL Research University
-	\\ France 
-	\And
-	Romain MICHON
-	\\ CCRMA, Stanford University
-	\\ USA
+{Pierre-Amaury Grumiaux${}^1$, Romain Michon${}^2$,\\
+\textbf{Emilio Gallego Arias}${}^1$\textbf{, and Pierre Jouvelot}${}^1$
+\\ ${}^1$MINES ParisTech, PSL Research University, France
+\\ ${}^2$CCRMA, Stanford University, USA
 }
+
+%\author
+%{Pierre-Amaury Grumiaux,
+%	\\\textbf{Emilio Gallego Arias,}
+%	\\\textbf{Pierre Jouvelot}
+%	\\ MINES ParisTech, PSL Research University
+%	\\ France
+%	\And
+%	Romain Michon
+%	\\ CCRMA, Stanford University
+%	\\ USA
+%}
 
 \newcommand{\f}{\textsc{Faust}}
 
@@ -55,7 +56,7 @@ The \f{} programming language has proven to be well suited to implement physical
 
 In this short paper, we present two Python scripts allowing to easily generate \f{} modal physical models: \texttt{ir2dsp.py} and \texttt{mesh2dsp.py}.
 \begin{itemize}
-\item 
+\item
 \texttt{ir2dsp.py} takes an audio file containing an impulse response as its main argument and converts it into a \f{} file implementing the corresponding modal physical model.
 \item
 \texttt{mesh2dsp.py} outputs the same type of model but takes an \texttt{.stl}\footnote{STereoLithography.} file containing the specification of any 3D object designed with a CAD\footnote{Computer-Aided Design.} program as its main argument.
@@ -82,15 +83,15 @@ Such a filter can be easily implemented in \f{} using a biquad filter (\texttt{t
 	a1 = -2*r*cos(w);
 	a2 = r^2;
   };
-  mode(f,t60,gain) = 
+  mode(f,t60,gain) =
         modeFilter(f,t60)*gain;
 \end{lstlisting}
 
 The \texttt{modeFilter} function can be easily applied in parallel in \f{} using the \texttt{par} operator to implement any modal physical model:
 
 \begin{lstlisting}
-  model = 
-        _ <: 
+  model =
+        _ <:
         par(i,nModes,
             mode(freq(i),t60(i),gain(i)))
         :> _;
@@ -104,7 +105,7 @@ The \f{}-generated block diagram corresponding to this code, with \lstinline{nMo
 	\label{fig:modalModel}
 \end{figure}
 
-This type of model can be easily excited by a filtered noise impulse (see Figure~\ref{fig:excitation}). The cutoff frequency of the lowpass and highpass filters can be used to excite specific zones of the spectrum of the model and to choose the ``excitation position.'' Since this system is linear, the same behavior could be achieved by scaling the gain of the different modes, but the filter approach that we use here will better integrate to our modular physical modeling synthesis toolkit, briefly presented in \S{}\ref{sec:future}. 
+This type of model can be easily excited by a filtered noise impulse (see Figure~\ref{fig:excitation}). The cutoff frequency of the lowpass and highpass filters can be used to excite specific zones of the spectrum of the model and to choose the ``excitation position.'' Since this system is linear, the same behavior could be achieved by scaling the gain of the different modes, but the filter approach that we use here will better integrate to our modular physical modeling synthesis toolkit, briefly presented in \S{}\ref{sec:future}.
 
 \begin{figure}[htbp]
  	\centering \includegraphics[width=\columnwidth]{pictures/excitation}
@@ -117,7 +118,7 @@ This type of model can be easily excited by a filtered noise impulse (see Figure
 
 \texttt{ir2dsp.py} takes an audio file containing an impulse response as its main argument. After performing the Fast Fourier Transform (FFT) on it, modes information is extracted by carrying out peaks detection. The \textit{T60} of each mode is computed by measuring its bandwidth at -3 dB.
 
-Modes information is formatted by \texttt{ir2dsp.py} to be plugged to a generic modal \f{} physical model similar to the one described in \S{}\ref{sec:model}. The output of the Python program is a ready-to-use \f{} file implementing the model. 
+Modes information is formatted by \texttt{ir2dsp.py} to be plugged to a generic modal \f{} physical model similar to the one described in \S{}\ref{sec:model}. The output of the Python program is a ready-to-use \f{} file implementing the model.
 
 The goal of this tool is not to create very accurate models but rather to be able to strike any object (e.g., a glass, a metal bar, etc.), record the resulting sound, and turn it into a playable digital musical instrument.
 
@@ -125,9 +126,9 @@ The goal of this tool is not to create very accurate models but rather to be abl
 
 The output of \texttt{mesh2dsp.py} is the same as \texttt{ir2dsp.py} (see \S{}\ref{sec:irdsp}), but it takes a \texttt{.stl} file as its input instead of an impulse response. \texttt{stl} is a common format supported by most CAD programs to export the description of 3D objects.
 
-After converting the provided \texttt{.stl} file into a mesh, \texttt{mesh2dsp.py} performs a Finite Element Analysis (FEA) using Elmer (\texttt{https://www.csc.fi/web/elmer}, URL verified on 02/08/17. Git repository can be found at \texttt{https://github.com/ElmerCSC/elmerfem}.) Various parameters such as the Young Modulus, the Poisson Coefficient, and the density of the material of the object must be provided to carry out this task.
+After converting the provided \texttt{.stl} file into a mesh, \texttt{mesh2dsp.py} performs a Finite Element Analysis (FEA) using Elmer \footnote{\url{https://www.csc.fi/web/elmer/} -- URL verified on 04/07/17.} Various parameters such as the Young Modulus, the Poisson Coefficient, and the density of the material of the object must be provided to carry out this task.
 
-The result of the analysis is a set of eigenvalues and mass participations for each mode. Eigenvalues are then converted to mode frequencies and mass participations to mode gains. Unfortunately, this technique doesn't allow to calculate the \textit{T60} of the modes which can be configured by the user directly from the \f{} program. 
+The result of the analysis is a set of eigenvalues and mass participations for each mode. Eigenvalues are then converted to mode frequencies and mass participations to mode gains. Unfortunately, this technique doesn't allow to calculate the \textit{T60} of the modes which can be configured by the user directly from the \f{} program.
 
 \section{Evaluation}
 
@@ -147,7 +148,7 @@ To evaluate the accuracy of \texttt{ir2dsp.py}, we recorded the impulse response
   \label{fig:spectro2}
 \end{figure}
 
-\texttt{mesh2dsp.py} was tested with the geometric 3D model of a solid bar and provided good results. 
+\texttt{mesh2dsp.py} was tested with the geometric 3D model of a solid bar and provided good results.
 
 \section{Future Work}
 \label{sec:future}
@@ -156,13 +157,13 @@ This work has been carried out as part of a larger project on designing a physic
 
 We plan to improve \texttt{ir2dsp.py} by using a better \textit{T60} measurement algorithm. Indeed, the \textit{T60} of each mode is currently computed by measuring its bandwidth after taking the FFT of the entire impulse response. A better approach would be to extract this information from a time-frequency representation of the signal (i.e., spectrogram), which would be more accurate.
 
-Finally, we would like to try other open-source packages than Elmer to carry out the FEA in \texttt{mesh2dsp.py} to get better results and to smooth its integration in our \f{} physical modeling toolkit.  
+Finally, we would like to try other open-source packages than Elmer to carry out the FEA in \texttt{mesh2dsp.py} to get better results and to smooth its integration in our \f{} physical modeling toolkit.
 
 \section{Conclusion}
 
 We presented a series of tools allowing to design at very high level ready-to-use physical models of musical instruments. Models can be generated from impulse responses or 3D graphical representations of physical objects.
 
-While the models generated by this system are far from being accurate, we believe that it provides a convenient way for composers and musicians to design expressive custom instruments usable in a musical context.  
+While the models generated by this system are far from being accurate, we believe that it provides a convenient way for composers and musicians to design expressive custom instruments usable in a musical context.
 
 % TODO: link to github
 
