@@ -54,7 +54,7 @@ Physical Modeling Synthesis, Faust Language, Digital Signal Processing
 
 The \f{} programming language has proven to be well suited to implement physical models of musical instruments~\cite{Michon2011} using waveguides~\cite{Smith2010} and modal synthesis~\cite{Adrien1991}.
 
-In this short paper, we present two Python scripts allowing to easily generate \f{} modal physical models: \texttt{ir2dsp.py} and \texttt{mesh2dsp.py}.
+In this short paper, we present two Python scripts\footnote{\url{https://github.com/rmichon/pmFaust/} -- All URLs in this paper were verified on 07/04/2017.} allowing to easily generate \f{} modal physical models: \texttt{ir2dsp.py} and \texttt{mesh2dsp.py}.
 \begin{itemize}
 \item
 \texttt{ir2dsp.py} takes an audio file containing an impulse response as its main argument and converts it into a \f{} file implementing the corresponding modal physical model.
@@ -126,7 +126,7 @@ The goal of this tool is not to create very accurate models but rather to be abl
 
 The output of \texttt{mesh2dsp.py} is the same as \texttt{ir2dsp.py} (see \S{}\ref{sec:irdsp}), but it takes a \texttt{.stl} file as its input instead of an impulse response. \texttt{stl} is a common format supported by most CAD programs to export the description of 3D objects.
 
-After converting the provided \texttt{.stl} file into a mesh, \texttt{mesh2dsp.py} performs a Finite Element Analysis (FEA) using Elmer \footnote{\url{https://www.csc.fi/web/elmer/} -- URL verified on 04/07/17.} Various parameters such as the Young Modulus, the Poisson Coefficient, and the density of the material of the object must be provided to carry out this task.
+After converting the provided \texttt{.stl} file into a mesh, \texttt{mesh2dsp.py} performs a Finite Element Analysis (FEA) using Elmer \footnote{\url{https://www.csc.fi/web/elmer/}} Various parameters such as the Young Modulus, the Poisson Coefficient, and the density of the material of the object must be provided to carry out this task.
 
 The result of the analysis is a set of eigenvalues and mass participations for each mode. Eigenvalues are then converted to mode frequencies and mass participations to mode gains. Unfortunately, this technique doesn't allow to calculate the \textit{T60} of the modes which can be configured by the user directly from the \f{} program.
 
