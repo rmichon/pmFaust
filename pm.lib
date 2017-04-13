@@ -6,54 +6,72 @@ import("stdfaust.lib");
 TODO:
 	- It'd be cool to have a version of the block diagram generator that automatically flips
 	things based on the use of chains, etc.
-	- 
+	-
 */
 
 //=============================Global Variables===========================================
-// TODO
+// Useful pre-defined variables for physical modeling.
 //========================================================================================
 
-// TODO doc
-maxDel = 2048;
-
-// TODO doc
+//--------------`speedOfSound`----------
+// Speed of sound in meters per second (340m/s).
+//--------------------------------------
 speedOfSound = 340;
 
-//================================Concversion Tools=======================================
-// TODO
+//================================Conversion Tools=======================================
+// Useful conversion tools for physical modeling.
 //========================================================================================
 
-// TODO doc
-f2l(freq) = speedOfSound/freq;
-
-//=============================Bidirectional Utilities====================================
-// TODO
-//========================================================================================
-
-//--------------feedback----------
-// Syntactic sugar for `A~B`.
+//--------------`f2l`----------
+// Frequency to lentgh in meters.
 //
 // #### Usage
 //
-// Example of a simple integrator:
-//
 // ```
-// _ : feedback(+,p) : _
+// f2l(freq) : distanceInMeters
 // ```
 //
 // Where:
 //
-// * `p`: the pole
+// * `freq`: the frequency
 //-------------------------------
-feedback(A,B) = A~B;
+f2l(freq) = speedOfSound/freq;
 
-// TODO doc
+//--------------`l2s`----------
+// Length in meters to number of samples.
+//
+// #### Usage
+//
+// ```
+// l2s(l) : numberOfSamples
+// ```
+//
+// Where:
+//
+// * `l`: length in meters
+//-------------------------------
+l2s(l) = l*ma.SR/speedOfSound;
+
+//=============================Bidirectional Utilities====================================
+// Set of fundamental functions to create bi-directional block diagrams in Faust.
+// These elements are used as the basis of this library.
+//========================================================================================
+
+//--------------`basicBlock`----------
+// Empty bidirectional block to be used with [`chain`](#chain): 3 signals ins and 3 signals out.
+//
+// #### Usage
+//
+// ```
+// chain(basicBlock : basicBlock : etc.)
+// ```
+//-------------------------------
 basicBlock = _,_,_;
 
-//-------chain(A:B:...)----------
-// Creates a chain of bidirectional blocks. 
-// Blocks must have 3 inputs and outputs. The first input/output correspond to the left 
-// going signal, the second input/output correspond to the right going signal and the 
+//-------`chain`----------
+// Creates a chain of bidirectional blocks.
+// Blocks must have 3 inputs and outputs. The first input/output correspond to the left
+// going signal, the second input/output correspond to the right going signal and the
 // third input/output is the mix of the main signal output. The implied one sample delay
 // created by the `~` operator is generalized to the left and right going waves. Thus, n
 // blocks in `chain()` will add an n samples delay to both the left and right going waves.
@@ -71,73 +89,101 @@ basicBlock = _,_,_;
 chain(A:As) = ((ro.crossnn(1),_',_ : _,A : ro.crossnn(1),_,_ : _,chain(As) : ro.crossnn(1),_,_)) ~ _ : !,_,_,_;
 chain(A) = A;
 
-//-------inputLeftW--------------
-// Adds a `x` to left going waves anywhere in a chain of blocks (see `chain()`).
+//-------`inLeftWave`--------------
+// Adds a signal to left going waves anywhere in a [`chain`](#chain) of blocks.
 //
 // #### Usage
 //
 // ```
-// string(x) = chain(A:inputLeftW(x):B)
+// model(x) = chain(A : inLeftWave(x) : B)
 // ```
 //
-// Where
-//
-// * `x`: the input signal to be added to the chain. 
+// Where `A` and `B` are bidirectional blocks and `x` is the signal added to left
+// going waves in that chain.
 //--------------------------------
 inLeftWave(x) = +(x),_,_;
 
-//-------inputRightW--------------
-// Adds a `x` to right going waves anywhere in a chain of blocks (see `chain()`).
+//-------`inRightWave`--------------
+// Adds a signal to right going waves anywhere in a [`chain`](#chain) of blocks.
 //
 // #### Usage
 //
 // ```
-// string(x) = chain(A:inputRightW(x):B)
+// model(x) = chain(A : inRightWave(x) : B)
 // ```
 //
-// Where
-//
-// * `x`: the input signal to be added to the chain. 
+// Where `A` and `B` are bidirectional blocks and `x` is the signal added to right
+// going waves in that chain.
 //--------------------------------
 inRightWave(x) = _,+(x),_;
 
-//-------input--------------
-// Adds a `x` to left and right going waves anywhere in a chain of blocks (see `chain()`).
+//-------`in`--------------
+// Adds a signal to left and right going waves anywhere in a [`chain`](#chain)
+// of blocks.
 //
 // #### Usage
 //
 // ```
-// string(x) = chain(A:input(x):B)
+// model(x) = chain(A : in(x) : B)
+// ```
+//
+// Where `A` and `B` are bidirectional blocks and `x` is the signal added to
+// left and right going waves in that chain.
+//--------------------------------
+in(x) = +(x),+(x),_;
+
+//-------`outLeftWave`--------------
+// Sends the signal of left going waves to the output channel of the [`chain`](#chain).
+//
+// #### Usage
+//
+// ```
+// chain(A : outLeftWave : B)
 // ```
 //
 // Where
 //
-// *`x`: the input signal to be added to the chain. 
+// Where `A` and `B` are bidirectional blocks.
 //--------------------------------
-in(x) = +(x),+(x),_;
-
-// TODO doc
 outLeftWave(x,y,s) = x,y,x+s;
 
-// TODO doc
+//-------`outRightWave`--------------
+// Sends the signal of right going waves to the output channel of the [`chain`](#chain).
+//
+// #### Usage
+//
+// ```
+// chain(A : outRightWave : B)
+// ```
+//
+// Where
+//
+// Where `A` and `B` are bidirectional blocks.
+//--------------------------------
 outRightWave(x,y,s) = x,y,y+s;
 
-//-------output()--------------
-// Adds a waveguide output anywhere between 2 blocks in a chain of blocks and sends it 
-// to the mix output channel (see `chain()`).
-// ### Usage
+//-------`out`--------------
+// Sends the signal of right and left going waves to the output channel of the [`chain`](#chain).
+//
+// #### Usage
+//
 // ```
-// chain(A:output:B)
+// chain(A : out : B)
 // ```
-//-----------------------------
+//
+// Where
+//
+// Where `A` and `B` are bidirectional blocks.
+//--------------------------------
 out(x,y,s) = x,y,x+y+s;
 
-//-------terminations(a,b,c)--------------
-// Creates terminations on both sides of a `chain()` without closing the inputs and 
-// outputs of the bidirectional signals chain. As for `chain()`, this function adds a 1
-// sample delay to the bidirectional signal both ways.
+//-------`terminations`--------------
+// Creates terminations on both sides of a [`chain`](#chain) without closing the inputs and
+// outputs of the bidirectional signals chain. As for [`chain`](#chain), this function adds a 1
+// sample delay to the bidirectional signal, both ways. Of courses, this function can be nested
+// within a [`chain`](#chain).
 //
-// ### Usage
+// #### Usage
 //
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(a,b,c) : rightGoingWaves,leftGoingWaves,mixedOutput
@@ -146,54 +192,78 @@ out(x,y,s) = x,y,x+y+s;
 //		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
 //		c = *(-1); // right termination
 // };
-// ```  
+// ```
 //----------------------------------------
-terminations(a,b,c) = (_,ro.crossnn(1),_,_ : +,+,_ : b) ~ (a,c : ro.crossnn(1)); // adds 2 samples to the loop!
+terminations(a,b,c) = (_,ro.crossnn(1),_,_ : +,+,_ : b) ~ (a,c : ro.crossnn(1));
 
-//-------leftTermination(a,b)----------
-// Creates a termination on the left side of a `chain()` without closing the inputs and 
+//-------`leftTermination`----------
+// Creates a termination on the left side of a [`chain`](#chain) without closing the inputs and
 // outputs of the bidirectional signals chain. This function adds a 1 sample delay near
-// the termination.
+// the termination and can be nested within another [`chain`](#chain).
 //
-// ### Usage
+// #### Usage
 //
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(a,b) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
 //		a = *(-1); // left termination
-//		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
+//		b = chain(D : E : F); // bidirectional chain of blocks (D, E, F, etc.)
 // };
-// ```  
+// ```
 //----------------------------------------
 lTermination(a,b) = (ro.crossnn(1),_,_ : _,+,_ : b) ~ a;
 
-//-------rTermination(b,c)----------
-// Creates a termination on the right side of a `chain()` without closing the inputs and 
+//-------`rTermination`----------
+// Creates a termination on the right side of a [`chain`](#chain) without closing the inputs and
 // outputs of the bidirectional signals chain. This function adds a 1 sample delay near
-// the termination.
+// the termination and can be nested within another [`chain`](#chain).
 //
-// ### Usage
+// #### Usage
 //
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : terminations(b,c) : rightGoingWaves,leftGoingWaves,mixedOutput
 // with{
-//		b = chain(D:E:F); // bidirectional chain of blocks (D, E, F, etc.)
+//		b = chain(D : E : F); // bidirectional chain of blocks (D, E, F, etc.)
 //		c = *(-1); // right termination
 // };
-// ```  
-// ### Requires
-// `filter.lib` (`crossnn`)
+// ```
 //----------------------------------------
 rTermination(b,c) = (_,_,_,_ : +,_,_ : b) ~ (!,c);
 
-// TODO doc
-closeLeft = 0,0,0;
+//-------`closeIns`----------
+// Closes the inputs of a bidirectional chain in all directions.
+//
+// #### Usage
+//
+// ```
+// closeIns : chain(...) : 	_,_,_
+// ```
+//----------------------------------------
+closeIns = 0,0,0;
 
-// TODO doc
-closeRight = !,!,_;
+//-------`closeOuts`----------
+// Closes the outputs of a bidirectional chain in all directions except for the
+// main signal output (3d output).
+//
+// #### Usage
+//
+// ```
+// _,_,_ : chain(...) : closeOuts
+// ```
+//----------------------------------------
+closeOuts = !,!,_;
 
-// TODO doc
-endChain(b) = closeLeft : b : closeRight;
+//-------`endChain`----------
+// Closes the inputs and outputs of a bidirectional chain in all directions
+// except for the main signal output (3d output).
+//
+// #### Usage
+//
+// ```
+// endChain(chain(...))
+// ```
+//----------------------------------------
+endChain(b) = closeIns : b : closeOuts;
 
 
 //==================================Basic Elements========================================
@@ -206,9 +276,9 @@ endChain(b) = closeLeft : b : closeRight;
 // ```
 // rightGoingWaves,leftGoingWaves,mixedOutput : waveguide(nMax,n) : rightGoingWaves,leftGoingWaves,mixedOutput
 // ```
-// With: 
+// With:
 // * `nMax`: the maximum length of the waveguide in samples and as a power of 2
-// * `n` the length of the waveguide in samples. 
+// * `n` the length of the waveguide in samples.
 // ### Requires
 // `filter.lib` (`fdelay4`)
 //----------------------------------
@@ -219,9 +289,10 @@ waveguideFd4(nMax,n) = par(i,2,de.fdelay4(nMax,n)),_;
 waveguide(nMax,n) = waveguideFd4(nMax,n);
 
 // TODO doc
-openString(length) = waveguide(maxDel,n)
+openString(maxLength,length) = waveguide(nMax,n)
 with{
-	n = length*ma.SR/speedOfSound/2;
+	nMax = (maxLength : l2s/2 : ma.np2)*0 + 2048; // TODO: temporary fix here: maxLength is not used!
+	n = length : l2s/2;
 };
 
 // TODO doc
@@ -272,8 +343,8 @@ impulseExcitation(trigger) = trigger : ba.impulsify;
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 //-------idealString(length,reflexion,xPosition,x)----------
-// An ideal string with rigid terminations and where the plucking position and the 
-// pick-up position are the same. 
+// An ideal string with rigid terminations and where the plucking position and the
+// pick-up position are the same.
 // ### Usage
 // ```
 // 1-1' : idealString(length,reflexion,xPosition,x)
@@ -350,7 +421,7 @@ with{
 	nUp = N/2*pluckPosition : max(1); // upper string segment length
 	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
 	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
-	
+
 	term(x) = bridge(length,B,t60,x)
 	with{
 		B = 0.25;
