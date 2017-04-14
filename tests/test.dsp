@@ -29,7 +29,7 @@ bridge(reflexion,absorption) = rTermination(basicBlock,reflectance) : _,transmit
 with{
 	// absorption is typically 0.6
 	reflectance = *(-reflexion) : si.smooth(absorption);
-	transmittance = _; // TODO: should be the inverse of refelctance	
+	transmittance = _; // TODO: should be the inverse of refelctance
 };
 
 
@@ -44,7 +44,7 @@ with{
 
 interact(b) = (_,_ <: b,_,_ :> _,_),_;
 
-bowInteraction(bowPressure,bowVelocity) = interact(bowSystem) 
+bowInteraction(bowPressure,bowVelocity) = interact(bowSystem)
 with{
 	bowSystem = + : bowVelocity-_ <: *(bow(bowPressure)) <: _,_;
 };
@@ -82,85 +82,13 @@ process = bowedStringModel(bowPress,bowVel,bridgeReflexion,bridgeAbsorption,bowP
 ////////////////////////////////////////////////////////
 
 
-reedTable(offset,slope) = reedTable : min(1) : max(-1)
-with {
-	reedTable = *(slope) + offset;
-};
-
-clarinetReed(stiffness) = reedTable(0.7,tableSlope)
-with{
-	tableSlope = -0.44 + 0.26*stiffness;
-};
-
-clarinetMouthPiece(reedStiffness,pressure) = lTermination(reedInteraction,in(pressure))
-with{
-	reedInteraction = *(-1) <: *(clarinetReed(reedStiffness));
-};
-
-// wood brass bell
-wbBell(opening) = rTermination(basicBlock,si.smooth(opening));
-
-// TODO may be add lowpass on noise
-blower(pressure,breathGain,breathCutoff) = pressure + breathNoise
-with{
-	breathNoise = no.noise : fi.lowpass(2,breathCutoff) : *(pressure*breathGain);
-};
-
-blower_ui = blower(pressure,breathGain,breathCutoff)
-with{
-	pressure = hslider("v:blower/[0]pressure",0,0,1,0.01) : si.smoo;
-	breathGain = hslider("v:blower/[1]breathGain",0.1,0,1,0.01)*0.05;
-	breathCutoff = hslider("v:blower/[2]breathCutoff",2000,20,20000,0.1);
-};
-
-singleReedMod(length,pressure,reedStiffness,bellOpening) = endChain(modelChain)
-with{
-	lengthTuning = 0.95;
-	tunedLength = length*lengthTuning;
-		modelChain = 
-			   chain(
-					clarinetMouthPiece(reedStiffness,pressure) :
-					openTube(tunedLength) :
-			  		 wbBell(bellOpening) : out );
-};
-
-singleReedMod_ui(pressure) =  singleReedMod(tubeLength,pressure,reedStiffness,bellOpening)*0.9
-with{
-	tubeLength = hslider("v:singleReed/[0]tubeLength",0.8,0.01,3,0.01) : si.smoo;
-	reedStiffness = hslider("v:singleReed/[1]reedStiffness",0.5,0,1,0.01);
-	bellOpening = hslider("v:singleReed/[2]bellOpening",0.5,0,1,0.01);
-};
-
-singleReedMIDI =  singleReedMod(tubeLength,blow,reedStiffness,bellOpening)*0.9
-with{
-	f = hslider("v:singleReedMidi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:singleReedMidi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:singleReedMidi/[2]gain",0.8,0,1,0.01);
-	reedStiffness = hslider("v:singleReedMidi/[3]reedStiffness[midi:ctrl 1]",0.5,0,1,0.01);
-	bellOpening = hslider("v:singleReedMidi/[4]bellOpening[midi:ctrl 3]",0.5,0,1,0.01);
-	vibratoFreq = hslider("v:singleReedMidi/[5]vibratoFreq",6,1,10,0.01);
-	vibratoGain = hslider("v:singleReedMidi/[6]vibratoGain",0.25,0,1,0.01)*0.01;
-	envAttack = hslider("v:singleReedMidi/[7]envAttack",1,0,30,0.01)*0.001;
-	t = button("v:singleReedMidi/[8]gate");
-	s = hslider("v:singleReedMidi/sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-
-	gate = t+s : min(1);
-	vibrato = 1+os.osc(vibratoFreq)*vibratoGain*envelope;
-	freq = f*bend*vibrato;
-	envelope = gate*0.6 : si.smooth(ba.tau2pole(envAttack));
-
-	tubeLength = freq : f2l;
-	pressure = envelope*vibrato;
-	blow = blower(pressure,0.05,2000);
-};
-
-clarinetInstr_demo = hgroup("clarinet",blower_ui : singleReedMod_ui);
-
 // clarinet MIDI instr goes here
 
-process = singleReedMIDI <: _,_;
+process = basicClarinet_ui_MIDI <: _,_;
+//l = hslider("l",0.5,0,1,0.01);
+//process = openString(1,0.5);
 
-
+//process = de.delay((1 : l2s/2 : ma.np2), l);
 
 //////////////////////////////////////////////////////////////
 // END OF CLARINET MODEL STUFF -> SHOULD MOVE THE PM.LIB
