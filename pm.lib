@@ -312,9 +312,6 @@ waveguideFd4(nMax,n) = par(i,2,de.fdelay4(nMax,n)),_;
 //----------------------------------
 waveguide(nMax,n) = waveguideFd4(nMax,n);
 
-// TODO doc
-ksReflexionFilter = _ <: (_+_')/2;
-
 //========================Basic String Instruments Elements===============================
 // Low and high level basic string instruments parts.
 //========================================================================================
@@ -340,8 +337,20 @@ with{
 	n = length : l2s/2;
 };
 
+//-------`ksReflexionFilter`----------
+// Karplus-strong feedforward reflexion filter.
+//
+// #### Usage
+//
+// ```
+// terminations(_,chain(...),ksReflexionFilter)
+// ```
+//----------------------------------
+ksReflexionFilter = _ <: (_+_')/2;
+
 //-------`rStringRigidTermination`----------
-// Right rigid string termination (no damping, just phase inversion).
+// Bidirectional block implementing a right rigid string termination (no damping,
+// just phase inversion).
 //
 // #### Usage
 //
@@ -352,7 +361,8 @@ with{
 rStringRigidTermination = rTermination(basicBlock,*(-1));
 
 //-------`lStringRigidTermination`----------
-// Left rigid string termination (no damping, just phase inversion).
+// Bidirectional block implementing a left rigid string termination (no damping,
+// just phase inversion).
 //
 // #### Usage
 //
@@ -362,14 +372,51 @@ rStringRigidTermination = rTermination(basicBlock,*(-1));
 //----------------------------------
 lStringRigidTermination = lTermination(*(-1),basicBlock);
 
-// TODO doc
+//-------`ksString`----------
+// A karplus-strong string (in that case, the string is implemented as a
+// one dimension waveguide).
+//
+// #### Usage
+//
+// ```
+// chain(A : openString(maxLength,length) : B)
+// ```
+//
+// Where:
+//
+// * `maxLength`: the maximum length of the string in meters (should be static)
+// * `length`: the length of the string in meters
+//----------------------------------
 ksString(length,damping,excitation) = endChain(ksChain)
 with{
+	maxStringLength = 1; // meters
 	lengthTuning = 0.94;
 	tunedLength = length*lengthTuning;
 	refCoef = (1-damping)*0.2+0.8;
 	refFilter = ksReflexionFilter*refCoef;
-	ksChain = terminations(_,chain(in(excitation) : openString(tunedLength) : out),refFilter);
+	ksChain = terminations(_,chain(in(excitation) : openString(maxStringLength,tunedLength) : out),refFilter);
+};
+
+//-------`ksString_ui_MIDI`----------
+// Ready-to-use MIDI-enabled karplus strong string with buil-in UI.
+//
+// #### Usage
+//
+// ```
+// ksString_ui_MIDI : _
+// ```
+//----------------------------------
+ksString_ui_MIDI = gate : impulseExcitation : ksString( (freq:f2l), damping )
+with{
+	f = hslider("v:karplus/v:[0]midi/[0]freq",440,50,1000,0.01);
+	bend = hslider("v:karplus/v:[0]midi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:karplus/v:[0]midi/[2]gain",0.8,0,1,0.01);
+	s = hslider("v:karplus/v:[0]midi/[3]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
+	t = button("v:karplus/v:[0]midi/[4]gate");
+	damping = hslider("v:karplus/[1]damping[midi:ctrl 1]",0.01,0,1,0.01);
+
+	gate = t+s : min(1);
+	freq = f*bend;
 };
 
 //=========================Bowed String Instruments Elements==============================
