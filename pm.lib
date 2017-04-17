@@ -415,7 +415,7 @@ with{
 // * `pluckPosition`: excitation position (0-1) (1 is bottom)
 // * `excitation`: the excitation signal
 //----------------------------------
-nylonString(length,pluckPosition,excitation) = openString(length,0.5,pluckPosition,excitation);
+nylonString(length,pluckPosition,excitation) = openString(length,0.4,pluckPosition,excitation);
 
 //-------`steelString`----------
 // A bidirectional block implementing a basic steel string with selectable excitation position.
