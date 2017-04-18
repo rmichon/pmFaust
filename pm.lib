@@ -6,7 +6,7 @@ import("stdfaust.lib");
 TODO:
 	- It'd be cool to have a version of the block diagram generator that automatically flips
 	things based on the use of chains, etc.
-	-
+	-When setting pole of filters bu hand (e.g. smooth, should adjust pole in function of SR)
 */
 
 //=============================Global Variables===========================================
@@ -675,9 +675,9 @@ with{
 //----------------------------------
 basicElecGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
-  maxStringLength = 1; // meters
-	lengthTuning = 0.94;
-	stringL = length*lengthTuning;
+  maxStringLength = 2; // meters
+	lengthTuning = 0.11;
+	stringL = length-lengthTuning;
   egChain = chain(elecGuitarNut : openStringPick(stringL,0.05,pluckPosition,excitation) : elecGuitarBridge);
 };
 
@@ -716,7 +716,7 @@ with{
 basicGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
   maxStringLength = 1; // meters
-	lengthTuning = 0.94;
+	lengthTuning = 1;
 	stringL = length*lengthTuning;
   egChain = chain(guitarNut : steelString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
 };
@@ -739,7 +739,7 @@ with{
 basicNylonGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
   maxStringLength = 1; // meters
-	lengthTuning = 0.94;
+	lengthTuning = 1;
 	stringL = length*lengthTuning;
   egChain = chain(guitarNut : nylonString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
 };
@@ -1248,11 +1248,12 @@ with{
 // This can also be any kind of signal that will directly injected in the mouthpiece
 // (e.g., breath noise, etc.)
 //----------------------------------
-basicClarinetModel_ui(pressure) = basicClarinetModel(tubeLength,pressure,reedStiffness,bellOpening)
+basicClarinetModel_ui(pressure) = basicClarinetModel(tubeLength,pressure,reedStiffness,bellOpening)*outGain
 with{
 	tubeLength = hslider("v:clarinetModel/[0]tubeLength",0.8,0.01,3,0.01) : si.smoo;
 	reedStiffness = hslider("v:clarinetModel/[1]reedStiffness",0.5,0,1,0.01);
 	bellOpening = hslider("v:clarinetModel/[2]bellOpening",0.5,0,1,0.01);
+	outGain = hslider("v:clarinetModel/[3]outGain",0.5,0,1,0.01);
 };
 
 //-------`basicClarinet_ui`----------
@@ -1282,7 +1283,7 @@ with{
 	gain = hslider("v:clarinetMidi/[2]gain",0.6,0,1,0.01);
 	reedStiffness = hslider("v:clarinetMidi/[3]reedStiffness[midi:ctrl 1]",0.5,0,1,0.01);
 	bellOpening = hslider("v:clarinetMidi/[4]bellOpening[midi:ctrl 3]",0.5,0,1,0.01);
-	vibratoFreq = hslider("v:clarinetMidi/[5]vibratoFreq",6,1,10,0.01);
+	vibratoFreq = hslider("v:clarinetMidi/[5]vibratoFreq",5,1,10,0.01);
 	vibratoGain = hslider("v:clarinetMidi/[6]vibratoGain",0.25,0,1,0.01)*0.01;
 	envAttack = hslider("v:clarinetMidi/[7]envAttack",1,0,30,0.01)*0.001;
 	s = hslider("v:clarinetMidi/[8]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
@@ -1295,7 +1296,7 @@ with{
 
 	tubeLength = freq : f2l;
 	pressure = envelope*vibrato;
-	blow = blower(pressure,0.05,2000);
+	blow = blower(pressure,0.05,2000,vibratoFreq,vibratoGain);
 };
 
 //=====================================Exciters===========================================
@@ -1360,8 +1361,9 @@ with{
 // * `breathGain`: breath noise gain (0-1) (recommended: 0.005)
 // * `breathCutoff`: breath cuttoff frequency (Hz) (recommended: 2000)
 //--------------------------------------
-blower(pressure,breathGain,breathCutoff) = pressure + breathNoise
+blower(pressure,breathGain,breathCutoff,vibratoFreq,vibratoGain) = pressure + vibrato + breathNoise
 with{
+	vibrato = os.osc(vibratoFreq)*vibratoGain;
 	breathNoise = no.noise : fi.lowpass(2,breathCutoff) : *(pressure*breathGain);
 };
 
@@ -1374,11 +1376,13 @@ with{
 // blower : somethingToBeBlown
 // ```
 //--------------------------------------
-blower_ui = blower(pressure,breathGain,breathCutoff)
+blower_ui = blower(pressure,breathGain,breathCutoff,vibratoFreq,vibratoGain)
 with{
 	pressure = hslider("v:blower/[0]pressure",0,0,1,0.01) : si.smoo;
 	breathGain = hslider("v:blower/[1]breathGain",0.1,0,1,0.01)*0.05;
 	breathCutoff = hslider("v:blower/[2]breathCutoff",2000,20,20000,0.1);
+	vibratoFreq = hslider("v:blower/[3]vibratoFreq",5,0.1,10,0.1);
+	vibratoGain = hslider("v:blower/[4]vibratoGain",0.25,0,1,0.01)*0.03;
 };
 
 

@@ -1,27 +1,62 @@
 import("stdfaust.lib");
 import("../pm.lib");
 
-
-process = basicGuitar_ui_MIDI <: _,_;
-
-
-/*
-ksString(length,damping,excitation) = endChain(ksChain)
+fluteJetTable = _ <: *(* : -(1)) : clipping
 with{
-	delTuning = 6;
-	delLength = length*ma.SR/speedOfSound/2 - delTuning;
-	refCoef = (1-damping)*0.2+0.8;
-	refFilter = _ <: (_+_')/2*refCoef;
-	ksChain = terminations(_,chain(in(excitation) : waveguide(maxDel,delLength) : out),refFilter);
+  clipping = min(1) : max(-1);
 };
 
-f = hslider("freq",400,50,1000,0.01);
-g = button("gate");
-damping = hslider("damping",0.5,0,1,0.01);
+fluteEmbouchure(pressure) = (_ <: _,_),_,_ : _,*(0.5)+(pressure-_*0.5 : fluteJetTable),_;
 
-process = g : impulseExcitation : ksString( (f:f2l), damping );
+fluteHead = lTermination(*(absorption),basicBlock)
+with{
+  absorption = 0.95; // TODO: may be should be controllable
+};
+
+fluteFoot = rTermination(basicBlock,*(absorption) : dispersion)
+with{
+  dispersion = si.smooth(0.7);
+  absorption = 0.95;
+};
+
+basicFluteModel(tubeLength,mouthPosition,pressure) = endChain(fluteChain)
+with{
+  maxTubeLength = 2; // meters
+  tubeTuning = 0.27;
+  tLength = tubeLength+tubeTuning;
+  embouchurePos = 0.27 + (mouthPosition-0.5)*0.2;
+  tted = tLength*embouchurePos;
+  eted = tLength*(1-embouchurePos);
+  fluteChain = chain(fluteHead : openTube(maxTubeLength,tted) : fluteEmbouchure(pressure) : openTube(maxTubeLength,eted) : fluteFoot : out);
+};
+
+pressure = hslider("pressure",0,0,1,0.01) : si.smoo;
+length = hslider("freq",440,50,2000,0.01) : l2f : si.smoo;
+pos = hslider("pos",0.3,0,1,0.01) : si.smoo;
+outGain = hslider("outGain",0.5,0,1,0.01);
+
+process = blower_ui : basicFluteModel(length,pos) : fi.dcblocker*outGain <: _,_;
+
+
+//////////////////////////////////
+// BRASS
+//////////////////////////////////
+
+/*
+brassLipsMouthPiece(freq,lipTension) = *(0.03) : fi.fi.resonbp(lipFilterFrequency,2,1) <: * : clipping
+with{
+  clipping = min(1);
+  lipFilterFrequency = freq*pow(4,(2*lipTension)-1);
+};
+
+basicBrassModel(tubeLength) = endChain(brassChain)
+with{
+  maxTubeLength = 1; // meters
+  brassChain = chain(openTube(maxTubeLength,tubeLength) : out);
+};
+
+process = basicBrassModel(0.5);
 */
-
 
 
 
