@@ -372,7 +372,7 @@ waveguide(nMax,n) = waveguideFd4(nMax,n);
 // the string plugged to it (0-1) (1 = 20 seconds)
 //----------------------------------
 // TODO: perhaps, the coefs of this filter should be adapted in function of SR
-bridgeFilter(brightness,absorption) = rho * (h0 * x' + h1*(x+x''))
+bridgeFilter(brightness,absorption,x) = rho * (h0 * x' + h1*(x+x''))
 with{
 	freq = 320;
   t60 = (1-absorption)*20;
@@ -634,7 +634,7 @@ lStringRigidTermination = lTermination(*(-1),basicBlock);
 // chain(... : stringSegment : elecGuitarBridge)
 // ```
 //----------------------------------
-elecGuitarBridge = rTermination(basicBlock,-bridgeFilter(0.8,0.5));
+elecGuitarBridge = rTermination(basicBlock,-bridgeFilter(0.8,0.6));
 
 //-------`elecGuitarNuts`----------
 // Bidirectional block implementing a simple electric guitar nuts. This
@@ -649,7 +649,7 @@ elecGuitarBridge = rTermination(basicBlock,-bridgeFilter(0.8,0.5));
 // chain(elecGuitarNuts : stringSegment : ...)
 // ```
 //----------------------------------
-elecGuitarNuts = lTermination(-bridgeFilter(0.8,0.5),basicBlock);
+elecGuitarNuts = lTermination(-bridgeFilter(0.8,0.6),basicBlock);
 
 //-------`guitarBridge`----------
 // Bidirectional block implementing a simple acoustic guitar bridge. This
@@ -686,7 +686,7 @@ with{
 guitarNuts = lTermination(-bridgeFilter(0.4,0.5),basicBlock);
 
 //-------`ks`----------
-// A karplus-strong string (in that case, the string is implemented as a
+// A Karplus-Strong string (in that case, the string is implemented as a
 // one dimension waveguide).
 //
 // #### Usage
@@ -713,7 +713,7 @@ with{
 };
 
 //-------`ks_ui_MIDI`----------
-// Ready-to-use MIDI-enabled karplus strong string with buil-in UI.
+// Ready-to-use, MIDI-enabled Karplus-Strong string with buil-in UI.
 //
 // #### Usage
 //
@@ -721,7 +721,7 @@ with{
 // ks_ui_MIDI : _
 // ```
 //----------------------------------
-ks_ui_MIDI = gate : impulseExcitation : ks( (freq:f2l), damping )
+ks_ui_MIDI = gate : impulseExcitation : ks( (freq : f2l), damping )
 with{
 	f = hslider("v:karplus/h:[0]params/[0]freq[style:knob]",440,50,1000,0.01);
 	bend = hslider("v:karplus/h:[0]params/[1]bend[style:knob][hide:1][midi:pitchwheel]"
@@ -730,20 +730,21 @@ with{
 	s = hslider("v:karplus/h:[0]params/[3]sustain[hide:1][midi:ctrl 64][style:knob]"
 	,0,0,1,1);
 	damping = hslider("v:karplus/h:[0]params/[1]damping[midi:ctrl 1][style:knob]"
-	,0.01,0,1,0.01);
+	,0.01,0,1,0.01) : si.smoo;
 	t = button("v:karplus/[1]gate");
 
 	gate = t+s : min(1);
 	freq = f*bend;
 };
 
-//-------`basicElecGuitarModel`----------
-// A simple electric guitar model (without audio effects, of course).
+//-------`elecGuitarModel`----------
+// A simple electric guitar model (without audio effects, of course) with
+// selectable pluck position.
 //
 // #### Usage
 //
 // ```
-// basicElecGuitarModel(length,pluckPosition,excitation) : _
+// elecGuitarModel(length,pluckPosition,excitation) : _
 // ```
 //
 // Where:
@@ -752,12 +753,57 @@ with{
 // * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
 // * `excitation`: excitation signal
 //----------------------------------
-basicElecGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
+elecGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
   maxStringLength = 2; // meters
 	lengthTuning = 0.11;
 	stringL = length-lengthTuning;
   egChain = chain(elecGuitarNuts : openStringPick(stringL,0.05,pluckPosition,excitation) : elecGuitarBridge);
+};
+
+//-------`elecGuitar`----------
+// A simple electric guitar model with steel strings (based on
+// [`elecGuitarModel`](#elecguiatmodel)) implementing an excitation
+// model.
+//
+// #### Usage
+//
+// ```
+// elecGuitar(length,pluckPosition,trigger) : _
+// ```
+//
+// Where:
+//
+// * `length`: the length of the string in meters
+// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
+// * `trigger`: trigger signal (1 for on, 0 for off)
+//----------------------------------
+elecGuitar(stringLength,pluckPosition,trigger) =
+pluckString(stringLength,1,1,1,trigger) : elecGuitarModel(stringLength, pluckPosition);
+
+//-------`elecGuitar_ui_MIDI`----------
+// Ready-to-use MIDI-enabled electric guitar physical model with built-in UI.
+//
+// #### Usage
+//
+// ```
+// elecGuitar_ui_MIDI : _
+// ```
+//----------------------------------
+elecGuitar_ui_MIDI = elecGuitar(stringLength,pluckPosition,gate)*outGain
+with{
+	f = hslider("v:elecGuitar/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:elecGuitar/h:[0]midi/[1]bend[hide:1][midi:pitchwheel][style:knob]"
+	,1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:elecGuitar/h:[0]midi/[2]gain[style:knob]",0.8,0,1,0.01);
+	s = hslider("v:elecGuitar/h:[0]midi/[3]sustain[hide:1]
+	[midi:ctrl 64][style:knob]",0,0,1,1);
+  pluckPosition = hslider("v:elecGuitar/[1]pluckPosition[midi:ctrl 1]",0.8,0,1,0.01) : si.smoo;
+  outGain = hslider("v:elecGuitar/[2]outGain",0.5,0,1,0.01);
+	t = button("v:elecGuitar/[3]gate");
+	gate = t+s : min(1);
+	freq = f*bend;
+  stringLength = freq : f2l;
 };
 
 //-------`guitarBody`----------
@@ -823,24 +869,6 @@ with{
   egChain = chain(guitarNuts : nylonString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
 };
 
-//-------`basicElecGuitar`----------
-// A simple acoustic guitar model with steel strings implementing an excitation model.
-//
-// #### Usage
-//
-// ```
-// basicElecGuitar(length,pluckPosition,trigger) : _
-// ```
-//
-// Where:
-//
-// * `length`: the length of the string in meters
-// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
-// * `trigger`: trigger signal (1 for on, 0 for off)
-//----------------------------------
-basicElecGuitar(stringLength,pluckPosition,trigger) =
-pluckString(stringLength,1,1,1,trigger) : basicElecGuitarModel(stringLength, pluckPosition);
-
 //-------`basicGuitar`----------
 // A simple acoustic guitar model with steel strings implementing an excitation model.
 //
@@ -876,29 +904,6 @@ pluckString(stringLength,1,1.5,1,trigger) : basicGuitarModel(stringLength, pluck
 //----------------------------------
 basicNylonGuitar(stringLength,pluckPosition,trigger) =
 pluckString(stringLength,1,1.5,1,trigger) : basicNylonGuitarModel(stringLength, pluckPosition);
-
-//-------`basicElecGuitar_ui_MIDI`----------
-// Ready-to-use MIDI-enabled electric guitar physical model with built-in UI.
-//
-// #### Usage
-//
-// ```
-// basicElecGuitar_ui_MIDI : _
-// ```
-//----------------------------------
-basicElecGuitar_ui_MIDI = basicElecGuitar(stringLength,pluckPosition,gate)*outGain
-with{
-	f = hslider("v:basicElecGuitar/v:[0]midi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:basicElecGuitar/v:[0]midi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:basicElecGuitar/v:[0]midi/[2]gain",0.8,0,1,0.01);
-	s = hslider("v:basicElecGuitar/v:[0]midi/[3]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-	t = button("v:basicElecGuitar/v:[0]midi/[4]gate");
-  pluckPosition = hslider("v:basicElecGuitar/pluckPosition",0.8,0,1,0.01);
-  outGain = hslider("v:basicElecGuitar/outGain",0.5,0,1,0.01);
-	gate = t+s : min(1);
-	freq = f*bend;
-  stringLength = freq : f2l;
-};
 
 //-------`basicGuitar_ui_MIDI`----------
 // Ready-to-use MIDI-enabled steel strings acoustic guitar physical model with built-in UI.
