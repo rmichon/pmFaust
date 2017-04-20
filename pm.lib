@@ -21,6 +21,8 @@ TODO:
 	- See how bowed modal models could be integarted to this
 	- Currently still missing keyboard instruments
 	- Currently still missing vocal synth: easy to fix (create a formant filter function)
+	- Real polyphonic instruments should be designated with some kind of prefix (e.g.,
+	full)
 */
 
 //=============================Global Variables===========================================
@@ -703,8 +705,8 @@ guitarNuts = lTermination(-bridgeFilter(0.4,0.5),basicBlock);
 //----------------------------------
 ks(length,damping,excitation) = endChain(ksChain)
 with{
-	maxStringLength = 1; // meters
-	lengthTuning = 0.05;
+	maxStringLength = maxLength;
+	lengthTuning = 0.05; // tuned "by hand"
 	tunedLength = length-0.05;
 	refCoef = (1-damping)*0.2+0.8;
 	refFilter = ksReflexionFilter*refCoef;
@@ -740,6 +742,8 @@ with{
 //-------`elecGuitarModel`----------
 // A simple electric guitar model (without audio effects, of course) with
 // selectable pluck position.
+// This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
 //
 // #### Usage
 //
@@ -755,16 +759,18 @@ with{
 //----------------------------------
 elecGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
-  maxStringLength = 2; // meters
-	lengthTuning = 0.11;
+  maxStringLength = maxLength;
+	lengthTuning = 0.11; // tuned "by hand"
 	stringL = length-lengthTuning;
   egChain = chain(elecGuitarNuts : openStringPick(stringL,0.05,pluckPosition,excitation) : elecGuitarBridge);
 };
 
 //-------`elecGuitar`----------
 // A simple electric guitar model with steel strings (based on
-// [`elecGuitarModel`](#elecguiatmodel)) implementing an excitation
+// [`elecGuitarModel`](#elecguitarmodel)) implementing an excitation
 // model.
+// This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
 //
 // #### Usage
 //
@@ -807,7 +813,7 @@ with{
 };
 
 //-------`guitarBody`----------
-// WARNING: not implemnted yet!
+// WARNING: not implemented yet!
 // Bidirectional block implementing a simple acoustic guitar body.
 //
 // #### Usage
@@ -823,13 +829,17 @@ with{
 	reflectance = _;
 };
 
-//-------`basicGuitarModel`----------
-// A simple acoustic guitar model with steel strings.
+//-------`guitarModel`----------
+// A simple acoustic guitar model with steel strings and selectable excitation
+// position. This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
+// WARNING: this function doesn't currently implement a body (just srings and
+// bridge)
 //
 // #### Usage
 //
 // ```
-// basicGuitarModel(length,pluckPosition,excitation) : _
+// guitarModel(length,pluckPosition,excitation) : _
 // ```
 //
 // Where:
@@ -838,44 +848,24 @@ with{
 // * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
 // * `excitation`: excitation signal
 //----------------------------------
-basicGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
+guitarModel(length,pluckPosition,excitation) = endChain(egChain)
 with{
-  maxStringLength = 1; // meters
-	lengthTuning = 1;
-	stringL = length*lengthTuning;
+  maxStringLength = maxLength;
+	lengthTuning = 0.1; // tuned "by hand"
+	stringL = length-lengthTuning;
   egChain = chain(guitarNuts : steelString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
 };
 
-//-------`basicNylonGuitarModel`----------
-// A simple acoustic guitar model with nylon strings.
+//-------`guitar`----------
+// A simple acoustic guitar model with steel strings (based on
+// [`guitarModel`](#guitarmodel)) implementing an excitation model.
+// This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
 //
 // #### Usage
 //
 // ```
-// basicNylonGuitarModel(length,pluckPosition,excitation) : _
-// ```
-//
-// Where:
-//
-// * `length`: the length of the string in meters
-// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
-// * `excitation`: excitation signal
-//----------------------------------
-basicNylonGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
-with{
-  maxStringLength = 1; // meters
-	lengthTuning = 1;
-	stringL = length*lengthTuning;
-  egChain = chain(guitarNuts : nylonString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
-};
-
-//-------`basicGuitar`----------
-// A simple acoustic guitar model with steel strings implementing an excitation model.
-//
-// #### Usage
-//
-// ```
-// basicGuitar(length,pluckPosition,trigger) : _
+// guitar(length,pluckPosition,trigger) : _
 // ```
 //
 // Where:
@@ -884,75 +874,115 @@ with{
 // * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
 // * `trigger`: trigger signal (1 for on, 0 for off)
 //----------------------------------
-basicGuitar(stringLength,pluckPosition,trigger) =
-pluckString(stringLength,1,1.5,1,trigger) : basicGuitarModel(stringLength, pluckPosition);
+guitar(stringLength,pluckPosition,trigger) =
+pluckString(stringLength,1,1.5,1,trigger) : guitarModel(stringLength, pluckPosition);
 
-//-------`basicNylonGuitar`----------
-// A simple acoustic guitar model with nylon strings implementing an excitation model.
+//-------`guitar_ui_MIDI`----------
+// Ready-to-use MIDI-enabled steel strings acoustic guitar physical model with
+// built-in UI.
 //
 // #### Usage
 //
 // ```
-// basicNylonGuitar(length,pluckPosition,trigger) : _
-// ```
-//
-// Where:
-//
-// * `length`: the length of the string in meters
-// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
-// * `trigger`: trigger signal (1 for on, 0 for off)
-//----------------------------------
-basicNylonGuitar(stringLength,pluckPosition,trigger) =
-pluckString(stringLength,1,1.5,1,trigger) : basicNylonGuitarModel(stringLength, pluckPosition);
-
-//-------`basicGuitar_ui_MIDI`----------
-// Ready-to-use MIDI-enabled steel strings acoustic guitar physical model with built-in UI.
-//
-// #### Usage
-//
-// ```
-// basicGuitar_ui_MIDI : _
+// guitar_ui_MIDI : _
 // ```
 //----------------------------------
-basicGuitar_ui_MIDI = basicGuitar(stringLength,pluckPosition,gate)*outGain
+guitar_ui_MIDI = guitar(stringLength,pluckPosition,gate)*outGain
 with{
-	f = hslider("v:basicGuitar/v:[0]midi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:basicGuitar/v:[0]midi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:basicGuitar/v:[0]midi/[2]gain",0.8,0,1,0.01);
-	s = hslider("v:basicGuitar/v:[0]midi/[3]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-	t = button("v:basicGuitar/v:[0]midi/[4]gate");
-  pluckPosition = hslider("v:basicGuitar/pluckPosition",0.8,0,1,0.01);
-  outGain = hslider("v:basicGuitar/outGain",0.5,0,1,0.01);
+	f = hslider("v:guitar/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:guitar/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
+	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:guitar/h:[0]midi/[2]gain[style:knob]",0.8,0,1,0.01);
+	s = hslider("v:guitar/h:[0]midi/[3]sustain[hide:1][midi:ctrl 64]
+	[style:knob]",0,0,1,1);
+  pluckPosition = hslider("v:guitar/pluckPosition[midi:ctrl 1]"
+	,0.8,0,1,0.01) : si.smoo;
+  outGain = hslider("v:guitar/outGain",0.5,0,1,0.01);
+	t = button("v:guitar/[4]gate");
 	gate = t+s : min(1);
 	freq = f*bend;
   stringLength = freq : f2l;
 };
 
-//-------`basicNylonGuitar_ui_MIDI`----------
-// Ready-to-use MIDI-enabled nylon strings acoustic guitar physical model with built-in UI.
+//-------`nylonGuitarModel`----------
+// A simple acoustic guitar model with nylon strings and selectable excitation
+// position. This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
+// WARNING: this function doesn't currently implement a body (just srings and
+// bridge)
 //
 // #### Usage
 //
 // ```
-// basicNylonGuitar_ui_MIDI : _
+// nylonGuitarModel(length,pluckPosition,excitation) : _
+// ```
+//
+// Where:
+//
+// * `length`: the length of the string in meters
+// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
+// * `excitation`: excitation signal
+//----------------------------------
+nylonGuitarModel(length,pluckPosition,excitation) = endChain(egChain)
+with{
+  maxStringLength = maxLength; // meters
+	lengthTuning = 0.11;
+	stringL = length-lengthTuning;
+  egChain = chain(guitarNuts : nylonString(stringL,pluckPosition,excitation) :
+	guitarBridge : guitarBody : out);
+};
+
+//-------`nylonGuitar`----------
+// A simple acoustic guitar model with steel strings (based on
+// [`nylonGuitarModel`](#nylonguitarmodel)) implementing an excitation model.
+// This model implements a single string. Additional strings should be created
+// by making a polyphonic applications out of this function.
+//
+// #### Usage
+//
+// ```
+// nylonGuitar(length,pluckPosition,trigger) : _
+// ```
+//
+// Where:
+//
+// * `length`: the length of the string in meters
+// * `pluckPosition`: pluck position (0-1) (1 is on the bridge)
+// * `trigger`: trigger signal (1 for on, 0 for off)
+//----------------------------------
+nylonGuitar(stringLength,pluckPosition,trigger) =
+pluckString(stringLength,1,1.5,1,trigger) : nylonGuitarModel(stringLength, pluckPosition);
+
+//-------`nylonGuitar_ui_MIDI`----------
+// Ready-to-use MIDI-enabled nylon strings acoustic guitar physical model with
+// built-in UI.
+//
+// #### Usage
+//
+// ```
+// nylonGuitar_ui_MIDI : _
 // ```
 //----------------------------------
-basicNylonGuitar_ui_MIDI = basicNylonGuitar(stringLength,pluckPosition,gate)*outGain
+nylonGuitar_ui_MIDI = nylonGuitar(stringLength,pluckPosition,gate)*outGain
 with{
-	f = hslider("v:basicNylonGuitar/v:[0]midi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:basicNylonGuitar/v:[0]midi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:basicNylonGuitar/v:[0]midi/[2]gain",0.8,0,1,0.01);
-	s = hslider("v:basicNylonGuitar/v:[0]midi/[3]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-	t = button("v:basicNylonGuitar/v:[0]midi/[4]gate");
-  pluckPosition = hslider("v:basicNylonGuitar/pluckPosition",0.8,0,1,0.01);
-  outGain = hslider("v:basicNylonGuitar/outGain",0.5,0,1,0.01);
+	f = hslider("v:nylonGuitar/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:nylonGuitar/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
+	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:nylonGuitar/h:[0]midi/[2]gain[style:knob]",0.8,0,1,0.01);
+	s = hslider("v:nylonGuitar/h:[0]midi/[3]sustain[hide:1][midi:ctrl 64]
+	[style:knob]",0,0,1,1);
+  pluckPosition = hslider("v:nylonGuitar/pluckPosition[midi:ctrl 1]"
+	,0.8,0,1,0.01) : si.smoo;
+  outGain = hslider("v:nylonGuitar/outGain",0.5,0,1,0.01);
+	t = button("v:nylonGuitar/[4]gate");
 	gate = t+s : min(1);
 	freq = f*bend;
   stringLength = freq : f2l;
 };
 
 //=========================Bowed String Instruments Elements==============================
-// Low and high level bowed string instruments parts.
+// Low and high level basic string instruments parts. Most of the elements in
+// this section can be used in a bidirectional chain.
 //========================================================================================
 
 //-------`bowTable`----------
@@ -977,13 +1007,13 @@ with{
 };
 
 
-//-------`violinBow`----------
-// Violin bow based on [`bowTable`](#bowtable).
+//-------`violinBowTable`----------
+// Violin bow table based on [`bowTable`](#bowtable).
 //
 // #### Usage
 //
 // ```
-// bowVelocity : violinBow(bowPressure) : _
+// bowVelocity : violinBowTable(bowPressure) : _
 // ```
 //
 // Where:
@@ -991,7 +1021,7 @@ with{
 // * `bowVelocity`: velocity of the bow/excitation signal (0-1)
 // * `bowPressure`: bow pressure on the string (0-1)
 //----------------------------------
-violinBow(bowPressure) = bowTable(0,tableSlope)
+violinBowTable(bowPressure) = bowTable(0,tableSlope)
 with{
 	tableSlope = 5 - (4*bowPressure);
 };
@@ -1003,22 +1033,23 @@ with{
 // #### Usage
 //
 // ```
-// chain(... : stringSegment : bowInteraction(bow) : stringSegment : ...)
+// chain(... : stringSegment : bowInteraction(bowTable) : stringSegment : ...)
 // ```
 //
 // Where:
 //
-// * `bow`: the bow
+// * `bowTable`: the bow table
 //----------------------------------
 bowInteraction(b) = (_,_ <: b,_,_ :> _,_),_;
 
-//-------`violinBowInteraction`----------
-// Bidirectional block implementing a violin bow interaction.
+//-------`violinBow`----------
+// Bidirectional block implementing a violin bow and its interaction with
+// a string.
 //
 // #### Usage
 //
 // ```
-// chain(... : stringSegment : violinBowInteraction(bowPressure,bowVelocity) : stringSegment : ...)
+// chain(... : stringSegment : violinBow(bowPressure,bowVelocity) : stringSegment : ...)
 // ```
 //
 // Where:
@@ -1026,14 +1057,14 @@ bowInteraction(b) = (_,_ <: b,_,_ :> _,_),_;
 // * `bowVelocity`: velocity of the bow / excitation signal (0-1)
 // * `bowPressure`: bow pressure on the string (0-1)
 //----------------------------------
-violinBowInteraction(bowPressure,bowVelocity) = bowInteraction(bowSystem)
+violinBow(bowPressure,bowVelocity) = bowInteraction(bowSystem)
 with{
-	bowSystem = + : bowVelocity-_ <: *(violinBow(bowPressure)) <: _,_;
+	bowSystem = + : bowVelocity-_ <: *(violinBowTable(bowPressure)) <: _,_;
 };
 
 //-------`violinBowedString`----------
-// Violin bowed string bidirectional block. Terminations are not implemented
-// in this model
+// Violin bowed string bidirectional block with controllable bow position.
+// Terminations are not implemented in this model.
 //
 // #### Usage
 //
@@ -1051,17 +1082,18 @@ with{
 violinBowedString(stringLength,bowPressure,bowVelocity,bowPosition) =
 	chain(
 		stringSegment(maxStringLength,ntbd) :
-		violinBowInteraction(bowPressure,bowVelocity) :
+		violinBow(bowPressure,bowVelocity) :
 		stringSegment(maxStringLength,btbd)
 	)
 with{
-	maxStringLength = 1; // meters
-	ntbd = stringLength*bowPosition;
-	btbd = stringLength*(1-bowPosition);
+	maxStringLength = maxLength;
+	ntbd = stringLength*bowPosition; // upper portion of the string length
+	btbd = stringLength*(1-bowPosition); // lower portion of the string length
 };
 
 //-------`violinNuts`----------
-// Dirt simple implementation of a violin "nuts": rigid termination.
+// Bidirectional block implementing simple violin nuts. This function is
+// based on [`bridgeFilter`](#bridgefilter).
 //
 // #### Usage
 //
@@ -1069,10 +1101,11 @@ with{
 // chain(violinNuts : stringSegment : ...)
 // ```
 //----------------------------------
-violinNuts = lStringRigidTermination;
+violinNuts = lTermination(-bridgeFilter(0.6,0.1),basicBlock);
 
 //-------`violinBridge`----------
-// Bidirectional block implementing a simple violin bridge.
+// Bidirectional block implementing a simple violin bridge. This function is
+// based on [`bridgeFilter`](#bridgefilter).
 //
 // #### Usage
 //
@@ -1089,7 +1122,8 @@ with{
 };
 
 //-------`violinBody`----------
-// Bidirectional block implementing a simple violin body.
+// Bidirectional block implementing a simple violin body (just a simple
+// resonant lowpass filter).
 //
 // #### Usage
 //
@@ -1105,13 +1139,16 @@ with{
 	reflectance = _;
 };
 
-//-------`basicViolinModel`----------
-// Ready-to-use basic violin physical model.
+//-------`violinModel`----------
+// Ready-to-use simple violin physical model. This model implements a single
+// string. Additional strings should be created
+// by making a polyphonic applications out of this function.
 //
 // #### Usage
 //
 // ```
-// basicViolinModel(stringLength,bowPressure,bowVelocity,bridgeReflexion,bridgeAbsorption,bowPosition) : _
+// violinModel(stringLength,bowPressure,bowVelocity,bridgeReflexion,
+// bridgeAbsorption,bowPosition) : _
 // ```
 //
 // Where:
@@ -1121,11 +1158,11 @@ with{
 // * `bowPressure`: bow pressure on the string (0-1))
 // * `bowPosition`: the position of the bow on the string (0-1)
 //----------------------------------
-basicViolinModel(stringLength,bowPressure,bowVelocity,bowPosition) =
+violinModel(stringLength,bowPressure,bowVelocity,bowPosition) =
 	endChain(modelChain)
 with{
-	stringTuning = 0.95;
-	stringL = stringLength*stringTuning;
+	stringTuning = 0.08;
+	stringL = stringLength-stringTuning;
 	modelChain = chain(
 		violinNuts :
 		violinBowedString(stringL,bowPressure,bowVelocity,bowPosition) :
@@ -1135,46 +1172,55 @@ with{
 	);
 };
 
-//-------`basicViolinModel_ui`----------
+//-------`violinModel_ui`----------
 // Ready-to-use violin physical model with built-in UI.
 //
 // #### Usage
 //
 // ```
-// basicViolinModel_ui : _
+// violinModel_ui : _
 // ```
 //----------------------------------
-basicViolin_ui = basicViolinModel(stringLength,bowPress,bowVel,bowPos)*outGain
+violin_ui = violinModel(stringLength,bowPress,bowVel,bowPos)*outGain
 with{
-	stringLength = hslider("v:violinModel/v:[0]string/[0]length",0.75,0,1,0.01);
-	bowVel = hslider("v:violinModel/v:[1]bow/[0]velocity",0,0,1,0.01) : si.smoo;
-	bowPress = hslider("v:violinModel/v:[1]bow/[1]pressure",0.5,0,1,0.01);
-	bowPos = hslider("v:violinModel/v:[1]bow/[2]position",0.7,0,1,0.01);
-	outGain = hslider("v:violinModel/outGain",0.5,0,1,0.01);
+	stringLength = hslider("v:violin/v:[0]string/[0]length",0.75,0,2,0.01) : si.smoo;
+	bowVel = hslider("v:violin/v:[1]bow/[0]velocity",0,0,1,0.01) : si.smoo;
+	bowPress = hslider("v:violin/v:[1]bow/[1]pressure",0.5,0,1,0.01) : si.smoo;
+	bowPos = hslider("v:violin/v:[1]bow/[2]position",0.7,0,1,0.01) : si.smoo;
+	outGain = hslider("v:violin/outGain",0.5,0,1,0.01);
 };
 
-//-------`basicViolinModel_ui_MIDI`----------
+//-------`violin_ui_MIDI`----------
 // Ready-to-use MIDI-enabled violin physical model with built-in UI.
 //
 // #### Usage
 //
 // ```
-// basicViolinModel_ui_MIDI : _
+// violin_ui_MIDI : _
 // ```
 //----------------------------------
-basicViolin_ui_MIDI = basicViolinModel(stringLength,bowPress,bowVel,bowPos)*outGain
+violin_ui_MIDI = violinModel(stringLength,bowPress,bowVel,bowPos)*outGain
 with{
-	f = hslider("v:violinModel/v:[0]midi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:violinModel/v:[0]midi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:violinModel/v:[0]midi/[2]gain",0.6,0,1,0.01); // TODO: this might need some tuning
-	envAttack = hslider("v:violinModel/v:[0]midi/[3]envAttack",1,0,30,0.01)*0.001;
-	s = hslider("v:violinModel/v:[0]midi/[4]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-	t = button("v:violinModel/v:[0]midi/[5]gate");
-	bowPress = hslider("v:violinModel/v:[1]bow/[0]pressure",0.5,0,1,0.01);
-	bowPos = hslider("v:violinModel/v:[1]bow/[1]position",0.7,0,1,0.01);
-	vibratoFreq = hslider("v:violinModel/v:[2]vibrato/[0]frequency",6,1,10,0.01);
-	vibratoGain = hslider("v:violinModel/v:[2]vibrato/[1]gain",0.5,0,1,0.01)*0.01;
-	outGain = hslider("v:violinModel/outGain",0.5,0,1,0.01);
+	f = hslider("v:violin/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:violin/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
+	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:violin/h:[0]midi/[2]gain[style:knob]
+	",0.6,0,1,0.01); // TODO: this might need some tuning
+	envAttack = hslider("v:violin/h:[0]midi/[3]envAttack[style:knob]
+	",1,0,30,0.01)*0.001;
+	s = hslider("v:violin/h:[0]midi/[4]sustain[hide:1][midi:ctrl 64]
+	[style:knob]",0,0,1,1);
+	bowPress = hslider("v:violin/h:[1]bow/[0]pressure[style:knob]
+	[midi:ctrl 1]",0.5,0,1,0.01);
+	bowPos = hslider("v:violin/h:[1]bow/[1]position[style:knob]
+	",0.7,0,1,0.01);
+	vibratoFreq = hslider("v:violin/h:[2]otherParams/[0]vibratoFrequency
+	[style:knob]",6,1,10,0.01);
+	vibratoGain = hslider("v:violin/h:[2]otherParams/[1]vibratoGain
+	[style:knob]",0.5,0,1,0.01)*0.01;
+	outGain = hslider("v:violin/h:[2]otherParams/[2]outGain[style:knob]
+	",0.5,0,1,0.01);
+	t = button("v:violin/[3]gate");
 
 	gate = t+s : min(1);
 	vibrato = 1+os.osc(vibratoFreq)*vibratoGain*envelope;
