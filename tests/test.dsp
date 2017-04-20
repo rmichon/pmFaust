@@ -66,6 +66,7 @@ process = basicFlute_ui_MIDI <: _,_;
 // BRASS
 //////////////////////////////////
 
+/*
 brassLipsMouthPieceTable(tubeLength,lipsTension) = *(0.03) : lipFilter <: * : clipping
 with{
   clipping = min(1) : max(-1);
@@ -124,7 +125,7 @@ with{
 };
 
 process = brassModel_ui_MIDI <: _,_;
-
+*/
 
 
 

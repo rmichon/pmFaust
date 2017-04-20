@@ -687,6 +687,34 @@ with{
 //----------------------------------
 guitarNuts = lTermination(-bridgeFilter(0.4,0.5),basicBlock);
 
+//-------`idealString`----------
+// An "ideal" string with rigid terminations and where the plucking position
+// and the pick-up position are the same. Since terminations are rigid, this
+// string will ring forever.
+//
+// #### Usage
+//
+// ```
+// 1-1' : idealString(length,reflexion,xPosition,excitation)
+// ```
+//
+// With:
+// * `length`: the length of the string in meters
+// * `pluckPosition`: the plucking position (0.001-0.999)
+// * `excitation`: the input signal for the excitation
+//----------------------------------------------------------
+idealString(length,pluckPosition,excitation) = wg
+with{
+	maxStringLength = maxLength;
+	lengthTuning = 0.08; // tuned "by hand"
+	tunedLength = length-lengthTuning;
+	nUp = tunedLength*pluckPosition; // upper string segment length
+	nDown = tunedLength*(1-pluckPosition); // lower string segment length
+	wg = chain(lStringRigidTermination : stringSegment(maxStringLength,nUp) :
+	in(excitation) : out : stringSegment(maxStringLength,nDown) :
+	rStringRigidTermination); // waveguide chain
+};
+
 //-------`ks`----------
 // A Karplus-Strong string (in that case, the string is implemented as a
 // one dimension waveguide).
@@ -707,7 +735,7 @@ ks(length,damping,excitation) = endChain(ksChain)
 with{
 	maxStringLength = maxLength;
 	lengthTuning = 0.05; // tuned "by hand"
-	tunedLength = length-0.05;
+	tunedLength = length-lengthTuning;
 	refCoef = (1-damping)*0.2+0.8;
 	refFilter = ksReflexionFilter*refCoef;
 	ksChain = terminations(_,chain(in(excitation) :
@@ -743,7 +771,8 @@ with{
 // A simple electric guitar model (without audio effects, of course) with
 // selectable pluck position.
 // This model implements a single string. Additional strings should be created
-// by making a polyphonic applications out of this function.
+// by making a polyphonic applications out of this function. Pitch is changed by
+// changing the length of the string and not through a finger model.
 //
 // #### Usage
 //
@@ -832,7 +861,8 @@ with{
 //-------`guitarModel`----------
 // A simple acoustic guitar model with steel strings and selectable excitation
 // position. This model implements a single string. Additional strings should be created
-// by making a polyphonic applications out of this function.
+// by making a polyphonic applications out of this function. Pitch is changed by
+// changing the length of the string and not through a finger model.
 // WARNING: this function doesn't currently implement a body (just srings and
 // bridge)
 //
@@ -907,7 +937,8 @@ with{
 //-------`nylonGuitarModel`----------
 // A simple acoustic guitar model with nylon strings and selectable excitation
 // position. This model implements a single string. Additional strings should be created
-// by making a polyphonic applications out of this function.
+// by making a polyphonic applications out of this function. Pitch is changed by
+// changing the length of the string and not through a finger model.
 // WARNING: this function doesn't currently implement a body (just srings and
 // bridge)
 //
@@ -1142,7 +1173,8 @@ with{
 //-------`violinModel`----------
 // Ready-to-use simple violin physical model. This model implements a single
 // string. Additional strings should be created
-// by making a polyphonic applications out of this function.
+// by making a polyphonic applications out of this function. Pitch is changed
+// by changing the length of the string (and not through a finger model).
 //
 // #### Usage
 //
@@ -1205,15 +1237,15 @@ with{
 	bend = hslider("v:violin/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
 	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
 	gain = hslider("v:violin/h:[0]midi/[2]gain[style:knob]
-	",0.6,0,1,0.01); // TODO: this might need some tuning
+	",0.6,0,1,0.01);
 	envAttack = hslider("v:violin/h:[0]midi/[3]envAttack[style:knob]
 	",1,0,30,0.01)*0.001;
 	s = hslider("v:violin/h:[0]midi/[4]sustain[hide:1][midi:ctrl 64]
 	[style:knob]",0,0,1,1);
 	bowPress = hslider("v:violin/h:[1]bow/[0]pressure[style:knob]
-	[midi:ctrl 1]",0.5,0,1,0.01);
+	[midi:ctrl 1]",0.5,0,1,0.01) : si.smoo;
 	bowPos = hslider("v:violin/h:[1]bow/[1]position[style:knob]
-	",0.7,0,1,0.01);
+	",0.7,0,1,0.01) : si.smoo;
 	vibratoFreq = hslider("v:violin/h:[2]otherParams/[0]vibratoFrequency
 	[style:knob]",6,1,10,0.01);
 	vibratoGain = hslider("v:violin/h:[2]otherParams/[1]vibratoGain
@@ -1232,7 +1264,8 @@ with{
 };
 
 //===========================Wind Instrument Elements=====================================
-// Low and high level wind instrument parts.
+// Low and high level basic wind instruments parts. Most of the elements in
+// this section can be used in a bidirectional chain.
 //========================================================================================
 
 //-------`openTube`----------
@@ -1253,7 +1286,7 @@ openTube = stringSegment;
 
 //-------`reedTable`----------
 // Extremely basic reed table that can be used to implement a wide range of
-// single reed types for many different instruments (saxophone, clarinet, etc.)
+// single reed types for many different instruments (saxophone, clarinet, etc.).
 //
 // #### Usage
 //
@@ -1291,7 +1324,8 @@ with{
 };
 
 //-------`clarinetReed`----------
-// Clarinet reed based on [`reedTable`](#reedtable).
+// Clarinet reed based on [`reedTable`](#reedtable) with controllable
+// stiffness.
 //
 // #### Usage
 //
@@ -1322,13 +1356,11 @@ with{
 //
 // Where:
 //
-// * `pressure`: the pressure of the air flow created by the virtual performer (0-1).
+// * `pressure`: the pressure of the air flow (DC) created by the virtual performer (0-1).
 // This can also be any kind of signal that will directly injected in the mouthpiece
 // (e.g., breath noise, etc.)
 // * `reedStiffness`: reed stiffness (0-1)
 //----------------------------------
-// TODO potentially, this function should be broken appart the same way we did it for bow
-// and bowInteraction
 clarinetMouthPiece(reedStiffness,pressure) = lTermination(reedInteraction,in(pressure))
 with{
 	reedInteraction = *(-1) <: *(clarinetReed(reedStiffness));
@@ -1346,18 +1378,18 @@ with{
 //
 // Where:
 //
-// * `opening`: the opening of bell (0-1)
+// * `opening`: the "opening" of bell (0-1)
 //----------------------------------
-// TODO: perhaps should reverse this
 wBell(opening) = rTermination(basicBlock,si.smooth(opening));
 
-//-------`basicClarinetModel`----------
-// A basic clarinet physical model.
+//-------`clarinetModel`----------
+// A simple clarinet physical model without tone holes (pitch is changed by
+// changing the length of the tube of the instrument).
 //
 // #### Usage
 //
 // ```
-// basicClarinetModel(length,pressure,reedStiffness,bellOpening) : _
+// clarinetModel(length,pressure,reedStiffness,bellOpening) : _
 // ```
 //
 // Where:
@@ -1369,11 +1401,11 @@ wBell(opening) = rTermination(basicBlock,si.smooth(opening));
 // * `reedStiffness`: reed stiffness (0-1)
 // * `bellOpening`: the opening of bell (0-1)
 //----------------------------------
-basicClarinetModel(tubeLength,pressure,reedStiffness,bellOpening) = endChain(modelChain)
+clarinetModel(tubeLength,pressure,reedStiffness,bellOpening) = endChain(modelChain)
 with{
-	lengthTuning = 0.95; // empirical adjustment of the tuning of the tube
-	maxTubeLength = 1; // meters
-	tunedLength = tubeLength*lengthTuning;
+	lengthTuning = 0.05; // empirical adjustment of the tuning of the tube
+	maxTubeLength = maxLength;
+	tunedLength = tubeLength/2-lengthTuning; // not really sure why we had to shift octave here
 	modelChain =
 		chain(
 			clarinetMouthPiece(reedStiffness,pressure) :
@@ -1382,22 +1414,23 @@ with{
 		);
 };
 
-//-------`basicClarinetModel_ui`----------
-// Same as [`basicClarinetModel`](#basicClarinetModel) but with a built-in UI.
+//-------`clarinetModel_ui`----------
+// Same as [`clarinetModel`](#clarinetModel) but with a built-in UI. This function
+// doesn't implement a virtual "blower", thus `pressure` remains an argument here.
 //
 // #### Usage
 //
 // ```
-// basicClarinetModel_ui(pressure) : _
+// clarinetModel_ui(pressure) : _
 // ```
 //
 // Where:
 //
 // * `pressure`: the pressure of the air flow created by the virtual performer (0-1).
-// This can also be any kind of signal that will directly injected in the mouthpiece
+// This can also be any kind of signal that will be directly injected in the mouthpiece
 // (e.g., breath noise, etc.)
 //----------------------------------
-basicClarinetModel_ui(pressure) = basicClarinetModel(tubeLength,pressure,reedStiffness,bellOpening)*outGain
+clarinetModel_ui(pressure) = clarinetModel(tubeLength,pressure,reedStiffness,bellOpening)*outGain
 with{
 	tubeLength = hslider("v:clarinetModel/[0]tubeLength",0.8,0.01,3,0.01) : si.smoo;
 	reedStiffness = hslider("v:clarinetModel/[1]reedStiffness",0.5,0,1,0.01);
@@ -1405,39 +1438,50 @@ with{
 	outGain = hslider("v:clarinetModel/[3]outGain",0.5,0,1,0.01);
 };
 
-//-------`basicClarinet_ui`----------
-// Ready-to-use clarinet physical model with built-in UI.
+//-------`clarinet_ui`----------
+// Ready-to-use clarinet physical model with built-in UI based on
+// [`clarinetModel`](#clarinetmodel).
 //
 // #### Usage
 //
 // ```
-// basicClarinet_ui : _
+// clarinet_ui : _
 // ```
 //----------------------------------
-basicClarinet_ui = hgroup("clarinet",blower_ui : basicClarinetModel_ui);
+clarinet_ui = hgroup("clarinet",blower_ui : clarinetModel_ui);
 
-//-------`basicClarinet_ui_MIDI`----------
+//-------`clarinet_ui_MIDI`----------
 // Ready-to-use MIDI compliant clarinet physical model with built-in UI.
 //
 // #### Usage
 //
 // ```
-// basicClarinet_ui_MIDI : _
+// clarinet_ui_MIDI : _
 // ```
 //----------------------------------
-// TODO: missing outGain
-basicClarinet_ui_MIDI =  basicClarinetModel(tubeLength,blow,reedStiffness,bellOpening)
+clarinet_ui_MIDI =
+clarinetModel(tubeLength,blow,reedStiffness,bellOpening)*outGain
 with{
-	f = hslider("v:clarinetMidi/[0]freq",440,50,1000,0.01);
-	bend = hslider("v:clarinetMidi/[1]bend[hide:1][midi:pitchwheel]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
-	gain = hslider("v:clarinetMidi/[2]gain",0.6,0,1,0.01);
-	reedStiffness = hslider("v:clarinetMidi/[3]reedStiffness[midi:ctrl 1]",0.5,0,1,0.01);
-	bellOpening = hslider("v:clarinetMidi/[4]bellOpening[midi:ctrl 3]",0.5,0,1,0.01);
-	vibratoFreq = hslider("v:clarinetMidi/[5]vibratoFreq",5,1,10,0.01);
-	vibratoGain = hslider("v:clarinetMidi/[6]vibratoGain",0.25,0,1,0.01)*0.01;
-	envAttack = hslider("v:clarinetMidi/[7]envAttack",1,0,30,0.01)*0.001;
-	s = hslider("v:clarinetMidi/[8]sustain[hide:1][midi:ctrl 64]",0,0,1,1);
-	t = button("v:clarinetMidi/[9]gate");
+	f = hslider("v:clarinet/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:clarinet/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
+	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:clarinet/h:[0]midi/[2]gain[style:knob]
+	",0.6,0,1,0.01);
+	envAttack = hslider("v:clarinet/h:[0]midi/[3]envAttack[style:knob]
+	",1,0,30,0.01)*0.001;
+	s = hslider("v:clarinet/h:[0]midi/[4]sustain[hide:1][midi:ctrl 64]
+	[style:knob]",0,0,1,1);
+	reedStiffness = hslider("v:clarinet/h:[1]otherParams/[0]reedStiffness
+	[midi:ctrl 1][style:knob]",0.5,0,1,0.01);
+	bellOpening = hslider("v:clarinet/h:[1]otherParams/[1]bellOpening
+	[midi:ctrl 3][style:knob]",0.5,0,1,0.01);
+	vibratoFreq = hslider("v:clarinet/h:[1]otherParams/[2]vibratoFreq
+	[style:knob]",5,1,10,0.01);
+	vibratoGain = hslider("v:clarinet/h:[1]otherParams/[3]vibratoGain
+	[style:knob]",0.25,0,1,0.01)*0.01;
+	outGain = hslider("v:clarinet/h:[1]otherParams/[4]outGain[style:knob]
+	",0.5,0,1,0.01);
+	t = button("v:clarinet/[2]gate");
 
 	gate = t+s : min(1);
 	vibrato = 1+os.osc(vibratoFreq)*vibratoGain*envelope;
@@ -1445,7 +1489,7 @@ with{
 	envelope = gate*gain : si.smooth(ba.tau2pole(envAttack));
 
 	tubeLength = freq : f2l;
-	pressure = envelope*vibrato; // TODO: double vibrato here!!
+	pressure = envelope; // TODO: double vibrato here!!
 	blow = blower(pressure,0.05,2000,vibratoFreq,vibratoGain);
 };
 
@@ -1539,118 +1583,8 @@ with{
 
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// OLD SECTIONS BEYOND THIS MARK
+// UNCATEGORIZED FUNCTIONS (TODO)
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-//-------idealString(length,reflexion,xPosition,x)----------
-// An ideal string with rigid terminations and where the plucking position and the
-// pick-up position are the same.
-// ### Usage
-// ```
-// 1-1' : idealString(length,reflexion,xPosition,x)
-// ```
-// With:
-// * `length`: the length of the string in meters
-// * `reflexion`: the coefficient of reflexion (0-0.99999999)
-// * `pluckPosition`: the plucking position (0.001-0.999)
-// * `x`: the input signal for the excitation
-// ### Requires
-// `filter.lib` (`fdelay4`,`crossnn`)
-//----------------------------------------------------------
-idealString(length,reflexion,pluckPosition,x) = fullTerminations(term,wg,term)
-with{
-	nMax = 512; // each segment of the string can't be longer than that
-	N = length*ma.SR/320-8; // length (meters) to samples
-	nUp = N/2*pluckPosition : max(1); // upper string segment length
-	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
-	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
-	term = *(-reflexion); // terminations
-};
-
-
-//-------bridge(length,B,t60,x)-----------
-// Simulate a bridge using a dampingFilter.
-// ### Usage
-// ```
-//
-// ```
-// With:
-// * `length`: length of the string in meters
-// * `B`: the brightness of the string (0-0.99)
-// * `t60̀: decaying time
-// * `x`: the input signal for the excitation
-// ### Requires
-// `filter.lib`
-//------------------------------------------------------
-/*
-bridge(length,B,t60,x) = dampingFilter(rho,h0,h1,x)
-with{
-	freq = 320/length;
-	h0 = (1.0 + B)/2;
-	h1 = (1.0 - B)/4;
-	rho = pow(0.001,1.0/(freq*t60));
-};
-*/
-
-//-------steelString-----------------------------
-//-----------------------------------------------
-/*
-steelString(length,pluckPosition,x) = fullTerminations(bridge,wg,bridge)
-with{
-	nMax = 512; // each segment of the string can't be longer than that
-	N = length*SR/320-8; // length (meters) to samples
-	nUp = N/2*pluckPosition : max(1); // upper string segment length
-	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
-	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
-	bridge = bridge(length,B,t60,x)
-	with{
-		B = 0.8;
-		t60 = 6;
-	};
-};
-*/
-
-//-------nylonString-----------------------------
-//-----------------------------------------------
-/*
-nylonString(length,pluckPosition,B,t60,x) = fullTerminations(term,wg,term)
-with{
-	nMax = 512; // each segment of the string can't be longer than that
-	N = length*SR/320-8; // length (meters) to samples
-	nUp = N/2*pluckPosition : max(1); // upper string segment length
-	nDown = N/2*(1-pluckPosition) : max(1); // lower string segment length
-	wg = chain(waveguide(nMax,nUp) : input(x) : output : waveguide(nMax,nDown)); // waveguide chain
-
-	term(x) = bridge(length,B,t60,x)
-	with{
-		B = 0.25;
-		t60 = 4;
-	};
-};
-*/
-
-//-------acousticExcitation(gate,P)-------------
-// Creates an acoustic excitation (a noise burst) when a gate button is triggered.
-// ### Usage
-// ```
-// gate = button('gate');
-// P = SR/freq;
-// acousticExcitation(gate,P) : chain;
-// ```
-// With:
-// * `gatè: a gate button
-// * `P̀ : fundamental period in samples
-// ### Requires
-// 'music.lib' (noise)
-//--------------------------------------
-acousticExcitation(gate,P) = no.noise : *(gate : trigger(P))
-with {
-     diffgtz(x) = (x-x') > 0;
-     decay(n,x) = x-(x>0)/n;
-     release(n) = + ~ decay(n);
-     trigger(n) = diffgtz : release(n) : > (0.0);
-};
-
 
 //-----modeFilter-----
 modeFilter(f,t60) = tf2(b0,b1,b2,a1,a2)
