@@ -7,4 +7,3 @@
 //#define SPOOLES_SOLVER_IS_AVAILABLE
 
 #endif
-

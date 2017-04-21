@@ -17,7 +17,7 @@ MESH2FAUST_OBJECTS=
 
 #MESH2FAUST_LIBS=mesher windingNumber volumetricMesh stvk reducedElasticForceModel reducedForceModel forceModel renderVolumetricMesh sparseSolver sparseMatrix objMesh imageIO modalMatrix matrix matrixIO getopts insertRows loadList camera minivector
 
-MESH2FAUST_LIBS=mesher windingNumber volumetricMesh stvk sparseSolver sparseMatrix objMesh matrix matrixIO
+MESH2FAUST_LIBS=minivector mesher windingNumber volumetricMesh stvk sparseSolver sparseMatrix objMesh matrix matrixIO
 
 # the headers in this utility
 MESH2FAUST_HEADERS=
@@ -32,7 +32,7 @@ MESH2FAUST_LIB_FILENAMES=$(call GET_LIB_FILENAMES, $(MESH2FAUST_LIBS))
 
 include $(MESH2FAUST_LIB_MAKEFILES)
 
-all: src/mesh2faust
+all: vega/libraries/wildMagic/rational vega/libraries/wildMagic/meshKey vega/libraries/wildMagic/geometryQuery src/mesh2faust 
 
 src/mesh2faust: src/mesh2faust.cpp
 	$(CXXLD) $(LDFLAGS) $(INCLUDE) $(MESH2FAUST_OBJECTS) src/mesh2faust.cpp $(MESH2FAUST_LINK) -lgeometryQuery -lmeshKey -lrational -o $@
@@ -41,12 +41,12 @@ $(MESH2FAUST_OBJECTS_FILENAMES): %.o: %.cpp $(MESH2FAUST_LIB_FILENAMES) $(MESH2F
 	$(CXX) $(CXXFLAGS) -c $(INCLUDE) $< -o $@
 
 ifeq ($(CLEANFOLDER), MESH2FAUST)
-clean: cleanvolumetricMeshUtilities
+clean: cleanMeshToFaust
 endif
 
-deepclean: cleanvolumetricMeshUtilities
+deepclean: cleanMeshToFaust
 
-cleanvolumetricMeshUtilities:
+cleanMeshToFaust:
 	$(RM) $(MESH2FAUST_OBJECTS_FILENAMES) src/mesh2faust
 
 endif

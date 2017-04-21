@@ -884,7 +884,8 @@ with{
   maxStringLength = maxLength;
 	lengthTuning = 0.1; // tuned "by hand"
 	stringL = length-lengthTuning;
-  egChain = chain(guitarNuts : steelString(stringL,pluckPosition,excitation) : guitarBridge : guitarBody : out);
+  egChain = chain(guitarNuts : steelString(stringL,pluckPosition,excitation) :
+	guitarBridge : guitarBody : out);
 };
 
 //-------`guitar`----------
