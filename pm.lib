@@ -791,7 +791,8 @@ with{
   maxStringLength = maxLength;
 	lengthTuning = 0.11; // tuned "by hand"
 	stringL = length-lengthTuning;
-  egChain = chain(elecGuitarNuts : openStringPick(stringL,0.05,pluckPosition,excitation) : elecGuitarBridge);
+  egChain = chain(elecGuitarNuts :
+		openStringPick(stringL,0.05,pluckPosition,excitation) : elecGuitarBridge);
 };
 
 //-------`elecGuitar`----------
@@ -1808,7 +1809,6 @@ with{
 };
 
 
-
 //=====================================Exciters===========================================
 // Various kind of excitation signal generators.
 //========================================================================================
@@ -1896,7 +1896,208 @@ with{
 };
 
 
+//============================Modal Percussions===========================================
+// High and low level functions for modal synthesis of percussion instruments.
+//========================================================================================
 
+// TODO
+
+//==============================Vocal Synthesis===========================================
+// Vocal synthesizer functions (source/filter, fof, etc.).
+//========================================================================================
+
+//-------`formantFilter`--------------
+// Formant filter based on a bank of resonant bandpass.
+// Formant parameters are linearly interpolated allowing to go smoothly from
+// one vowel to another. Voice type can be selected but must correspond to
+// the frequency range of the provided source to be realistic.
+//
+// The formant data used here come from the CSOUND manual
+// <http://www.csounds.com/manual/html/>.
+//
+// #### Usage
+//
+// ```
+// _ : formantFilter(voiceType,vowel) : _
+// ```
+//
+// Where:
+//
+// * `voiceType`: the voice type (0: alto, 1: bass, 2: countertenor, 3:
+// soprano, 4: tenor)
+// * `vowel`: the vowel (0: a, 1: e, 2: i, 3: o, 4: u)
+//--------------------------------------
+formantFilter(voiceType,vowel) =
+_ <: par(i,nFormants,fi.resonbp(f(i),f(i)/bw(i),g(i))) :> _
+with{
+	nFormants = 5;
+	f(0) = ba.listInterp( // formant 0 freqs
+    (800,400,350,450,325,600,400,250,400,350,660,440,270,430,370,
+  		800,350,270,450,325,650,400,290,400,350),(voiceType*nFormants)+vowel);
+	f(1) = ba.listInterp( // formant 1 freqs
+    (1150,1600,1700,800,700,1040,1620,1750,750,600,1120,1800,1850,820,630,
+      1150,2000,2140,800,700,1080,1700,1870,800,600),(voiceType*nFormants)+vowel);
+	f(2) = ba.listInterp( // formant 2 freqs
+    (2800,2700,2700,2830,2530,2250,2400,2600,2400,2400,2750,2700,2900,2700,2750,
+      2900,2800,2950,2830,2700,2650,2600,2800,2600,2700),(voiceType*nFormants)+vowel);
+	f(3) = ba.listInterp( // formant 3 freqs
+    (3500,3300,3700,3500,3500,2450,2800,3050,2600,2675,3000,3000,3350,3000,3000,
+      3900,3600,3900,3800,3800,2900,3200,3250,2800,2900),(voiceType*nFormants)+vowel);
+	f(4) = ba.listInterp( // formant 4 freqs
+    (4950,4950,4950,4950,4950,2750,3100,3340,2900,2950,3350,3300,3590,3300,3400,
+      4950,4950,4950,4950,4950,3250,3580,3540,3000,3300),(voiceType*nFormants)+vowel);
+  g(0) = 1; // formant 0 gains
+  g(1) = ba.listInterp( // formant 1 gains
+    (0.630957,0.063096,0.100000,0.354813,0.251189,0.446684,0.251189,0.031623,
+			0.281838,0.100000,0.501187,0.199526,0.063096,0.316228,0.100000,
+			0.501187,0.100000,0.251189,0.281838,0.158489,0.501187,0.199526,0.177828,
+			0.316228,0.100000),(voiceType*nFormants)+vowel);
+  g(2) = ba.listInterp( // formant 2 gains
+    (0.100000,0.031623,0.031623,0.158489,0.031623,0.354813,0.354813,0.158489,
+			0.089125,0.025119,0.070795,0.125893,0.063096,0.050119,0.070795,
+			0.025119,0.177828,0.050119,0.079433,0.017783,0.446684,0.251189,0.125893,
+			0.251189,0.141254),(voiceType*nFormants)+vowel);
+  g(3) = ba.listInterp( // formant 3 gains
+    (0.015849,0.017783,0.015849,0.039811,0.010000,0.354813,0.251189,0.079433,
+			0.100000,0.039811,0.063096,0.100000,0.015849,0.079433,0.031623,
+			0.100000,0.010000,0.050119,0.079433,0.010000,0.398107,0.199526,0.100000,
+			0.251189,0.199526),(voiceType*nFormants)+vowel);
+  g(4) = ba.listInterp( // formant 4 gains
+    (0.001000,0.001000,0.001000,0.001778,0.000631,0.100000,0.125893,0.039811,
+			0.010000,0.015849,0.012589,0.100000,0.015849,0.019953,0.019953,
+			0.003162,0.001585,0.006310,0.003162,0.001000,0.079433,0.100000,0.031623,
+			0.050119,0.050119),(voiceType*nFormants)+vowel);
+  bw(0) = ba.listInterp( // formant 0 bandwidths
+    (80,60,50,70,50,60,40,60,40,40,80,70,40,40,40,80,60,60,40,50,
+      50,70,40,70,40),(voiceType*nFormants)+vowel);
+  bw(1) = ba.listInterp( // formant 1 bandwidths
+    (90,80,100,80,60,70,80,90,80,80,90,80,90,80,60,90,100,90,80,60,
+      90,80,90,80,60),(voiceType*nFormants)+vowel);
+  bw(2) = ba.listInterp( // formant 2 bandwidths
+    (120,120,120,100,170,110,100,100,100,100,120,100,100,100,100,
+      120,120,100,100,170,120,100,100,100,100),(voiceType*nFormants)+vowel);
+  bw(3) = ba.listInterp( // formant 3 bandwidths
+    (130,150,150,130,180,120,120,120,120,120,130,120,120,120,120,
+      130,150,120,120,180,130,120,120,130,120),(voiceType*nFormants)+vowel);
+  bw(4) = ba.listInterp( // formant 4 bandwidths
+    (140,200,200,135,200,130,120,120,120,120,140,120,120,120,120,
+      140,200,120,120,200,140,120,120,135,120),(voiceType*nFormants)+vowel);
+};
+
+//-------`SFFormantModel`--------------
+// Simple formant/vocal synthesizer based on a source/filter model. The source
+// is just a sawtooth wave and the "filter" is a bank of resonant bandpass.
+// Formant parameters are linearly interpolated allowing to go smoothly from
+// one vowel to another. Voice type can be selected but must correspond to
+// the frequency range of the synthesized voice to be realistic.
+//
+// The formant data used here come from the CSOUND manual
+// <http://www.csounds.com/manual/html/>.
+//
+// #### Usage
+//
+// ```
+// SFFormantModel(voiceType,vowel,exType,freq,gain) : _
+// ```
+//
+// Where:
+//
+// * `voiceType`: the voice type (0: alto, 1: bass, 2: countertenor, 3:
+// soprano, 4: tenor)
+// * `vowel`: the vowel (0: a, 1: e, 2: i, 3: o, 4: u
+// * `exType`: voice vs. fricative sound ratio (0-1 where 1 is 100% fricative)
+//--------------------------------------
+SFFormantModel(voiceType,vowel,exType,freq,gain) = excitation : formantFilter(voiceType,vowel)
+with{
+	voice = os.sawtooth(freq);
+	breath = no.noise;
+	excitation = voice*(1-exType) + breath*exType : *(gain);
+};
+
+//-------`SFFormantModel_ui`----------
+// Ready-to-use source-filter vocal synthesizer with built-in user interface.
+//
+// #### Usage
+//
+// ```
+// SFFormantModel_ui : _
+// ```
+//----------------------------------
+SFFormantModel_ui = SFFormantModel(voiceType,vowel,fricative,freq,gain)
+with{
+	f = hslider("v:vocal/[0]freq",440,50,1000,0.01);
+	gain = hslider("v:vocal/[1]gain",0.9,0,1,0.01);
+	voiceType = hslider("v:vocal/[2]voiceType",0,0,4,1);
+	vowel = hslider("v:vocal/[3]vowel",0,0,4,0.01) : si.smoo;
+	fricative = hslider("v:vocal/[4]fricative",0,0,1,0.01) : si.smoo;
+	vibratoFreq = hslider("v:vocal/[5]vibratoFreq",6,1,10,0.01);
+	vibratoGain = hslider("v:vocal/[6]vibratoGain",0.5,0,1,0.01)*0.1;
+
+	freq = f*(os.osc(vibratoFreq)*vibratoGain+1);
+};
+
+//-------`SFFormantModel_ui_MIDI`----------
+// Ready-to-use MIDI-controllable source-filter vocal synthesizer.
+//
+// #### Usage
+//
+// ```
+// SFFormantModel_ui_MIDI : _
+// ```
+//----------------------------------
+SFFormantModel_ui_MIDI = SFFormantModel(voiceType,vowel,fricative,freq,envelope)*outGain
+with{
+	f = hslider("v:vocal/h:[0]midi/[0]freq[style:knob]",440,50,1000,0.01);
+	bend = hslider("v:vocal/h:[0]midi/[1]bend[hide:1][midi:pitchwheel]
+	[style:knob]",1,0,10,0.01) : si.polySmooth(gate,0.999,1);
+	gain = hslider("v:vocal/h:[0]midi/[2]gain[style:knob]
+	",0.9,0,1,0.01);
+	envAttack = hslider("v:vocal/h:[0]midi/[3]envAttack[style:knob]
+	",10,0,30,0.01)*0.001;
+	s = hslider("v:vocal/h:[0]midi/[4]sustain[hide:1][midi:ctrl 64]
+	[style:knob]",0,0,1,1);
+	voiceType = hslider("v:vocal/h:[1]otherParams/[0]voiceType
+	[style:knob]",0,0,4,1);
+	vowel = hslider("v:vocal/h:[1]otherParams/[1]vowel
+	[style:knob][midi:ctrl 1]",0,0,4,0.01) : si.smoo;
+	fricative = hslider("v:vocal/h:[1]otherParams/[2]fricative
+	[style:knob]",0,0,1,0.01) : si.smoo;
+	vibratoFreq = hslider("v:vocal/h:[1]otherParams/[3]vibratoFreq[style:knob]
+	",6,1,10,0.01);
+	vibratoGain = hslider("v:vocal/h:[1]otherParams/[4]vibratoGain[style:knob]
+	",0.5,0,1,0.01)*0.1;
+	outGain = hslider("v:vocal/h:[1]otherParams/[5]outGain[style:knob]
+	",0.5,0,1,0.01);
+	t = button("v:vocal/[2]gate");
+
+  gate = t+s : min(1);
+	freq = f*bend*(os.osc(vibratoFreq)*vibratoGain+1);
+	envelope = gate*gain : si.smooth(ba.tau2pole(envAttack));
+};
+
+//===============================Misc Functions===========================================
+// Various miscellaneous functions.
+//========================================================================================
+
+//-------`allpassNL`--------------
+// Bidirectional block adding nonlinearities in both directions in a chain.
+// Nonlinearities are created by modulating the coefficients of a passive
+// allpass filter by the signal it is processing.
+//
+// #### Usage
+//
+// ```
+// chain(... : allpassNL(nonlinearity) : ...)
+// ```
+//
+// Where:
+//
+// * `nonlinearity`: amount of nonlinearity to be added (0-1)
+//--------------------------------------
+allpassNL(nonlinearity) = par(i,2,nlf),_
+with{
+	nlf = _ <: fi.allpassn(2,par(i,2,*(nonlinearity)*ma.PI));
+};
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // UNCATEGORIZED FUNCTIONS (TODO)
