@@ -44,6 +44,9 @@ ifeq ($(CLEANFOLDER), MESH2FAUST)
 clean: cleanMeshToFaust
 endif
 
+install:
+	cp src/mesh2faust /usr/local/bin
+
 deepclean: cleanMeshToFaust
 
 cleanMeshToFaust:
