@@ -267,7 +267,7 @@ int main(int argc, char ** argv)
 			if(modesFreqs[i] < modesMinFreq){
 				lowestModeIndex++;
 			}
-			if(modesFreqs[i] < modesMaxFreq && (highestModeIndex-lowestModeIndex) <= targetNModes && highestModeIndex < volumetricMesh->getNumVertices()){
+			if(modesFreqs[i] < modesMaxFreq && (highestModeIndex-lowestModeIndex) < targetNModes && highestModeIndex < volumetricMesh->getNumVertices()){
 				highestModeIndex++;
 			}
   	}
@@ -361,7 +361,7 @@ int main(int argc, char ** argv)
 			if(i<(nExPos-1)) faustFile << ",";
 		}
 		faustFile << "},int(p*nModes+n) : rdtable;\n\n";
-		faustFile << "modalModel(exPos,t60,t60DecayRatio,t60DecaySlope) = _ <: par(i,nModes,*(modesGains(int(exPos),i)) : modeFilter(modesFreqs(i),modesT60s(i))) :> /(nModes)\n";
+		faustFile << objectName << "(exPos,t60,t60DecayRatio,t60DecaySlope) = _ <: par(i,nModes,*(modesGains(int(exPos),i)) : modeFilter(modesFreqs(i),modesT60s(i))) :> /(nModes)\n";
 		faustFile << "with{\n";
 		float freqDiff = modesFreqs[lowestModeIndex]/modesFreqs[highestModeIndex];
 		faustFile << "modesT60s(i) = t60*pow(1-(modesFreqs(i)/" << modesFreqs[highestModeIndex] << " - " << freqDiff << ")*(t60DecayRatio + " << freqDiff << "),t60DecaySlope);\n";

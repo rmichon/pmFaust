@@ -1,24 +1,63 @@
-# mesh2faust
+# `mesh2faust`
 
-`mesh2faust` is command line tool to generate Faust (<http://faust.grame.fr>)
-modal physical models from CAD files using finite element method (FEM). It is
-based on [Vega FEM](http://run.usc.edu/vega/). `mesh2faust` should work both
-on Linux and OSX.
+`mesh2faust` is an open-source modal physical model generator for the Faust
+programming language. `mesh2faust` takes a volumetric mesh of a 3D object as
+its main argument, carries out a finite element analysis, and generates the
+corresponding Faust modal physical model. A wide range of parameters can be
+configured to fine-tune the analysis as well as the behavior of the generated
+object.
+
+`mesh2faust` is based on [Vega FEM](http://run.usc.edu/vega/) and should work
+both on Linux and OSX.
 
 ## Build/Installation
 
-`mesh2faust` relies on Vega FEM. A lightweight adapted version of this library
-is part of this repository. In order to compile `mesh2faust`, some of Vega's
-dependencies must be installed:
+`mesh2faust` relies on [Vega FEM](http://run.usc.edu/vega/) to turn the
+provided volumetric mesh into a 3D mesh and to carry the finite element
+analysis on it. A lightweight adapted version of this library is part of this
+repository.
 
-* Intel MKL library
+Vega itself relies on some libraries that must be installed on your system in
+order to compile `mesh2faust`. This section walks you through the different
+steps to build and install `mesh2faust` on your system.
 
-To compile and install `mesh2faust`:
+### Linux
 
-```
-make
-sudo make install
-```
+* First, install the Intel MKL Library (<https://software.intel.com/en-us/intel-mkl>).
+Unfortunately, this library is not open source (but it's free), so you wont find
+it in your usual package manager.
+* Get `libarpack` with your package manager (`libarpack2-dev` in Ubuntu).
+* Go in `/vega/Makefile-headers/` and run "`selectLinux`"", this will update the
+dynamic link of `Makefile-header` to the right Makefile for your system.
+* You might have to make some adjustments in
+`/vega/Makefile-headers/Makefile-header.linux` in the "MKL Paths" section
+(Intel tends to change the organization of this lib pretty often).
+* Run: `make`
+* Run: `sudo make install`
+* NOTE: Additional adjustments might have to be made to `Makefile-header.linux`
+(compilation was only tested on Linux Mint)
+
+### OSX
+
+* First, install the Intel MKL Library (<https://software.intel.com/en-us/intel-mkl>).
+Unfortunately, this library is not open source (but it's free), so you wont find
+it in your usual package manager.
+* Get `arpack`. The `mesh2faust` makefiles were configured to work the MacPort
+version of `arpack` so we advise you to use this package manager to get it
+(e.g., `port install arpack`).
+* Go in `/vega/Makefile-headers/` and run "`selectMacOSX`"", this will update the
+dynamic link of `Makefile-header` to the right Makefile for your system.
+* You might have to make some adjustments in
+`/vega/Makefile-headers/Makefile-header.osx` in the "MKL Paths" and "ARPACK" sections
+depending on how you installed these 2 packages.
+* Run: `make`
+* Run: `sudo make install`
+* NOTE: Additional adjustments might have to be made to `Makefile-header.osx`
+(that's where you want to look at if you get some linker errors, etc.)
+
+## Using `mesh2faust`
+
+
 
 ## Extra Help
 

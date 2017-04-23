@@ -75,7 +75,7 @@ TetMesh * TetMesher::compute(ObjMesh * inputMesh, double refinementQuality, doub
 
   PerformanceCounter counter;
   counter.StartCounter();
-  initializeCDT();
+  initializeCDT(false); // RM: no face recovery!
   counter.StopCounter();
   double cdtTime = counter.GetElapsedTime();
 
